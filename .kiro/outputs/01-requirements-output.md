@@ -1,527 +1,546 @@
-# SecureClaims AI — Detailed Requirements Document
+# SecureClaims AI – Requirements Specification
 
-**Project:** SecureClaims AI  
+**System:** SecureClaims AI – Insurance Claims Processing System  
 **Version:** 1.0  
-**Generated:** 2026-07-03  
-**Lifecycle Phase:** ADLC — Requirements Generation  
-**Status:** Draft
+**Date:** 2026-07-03  
+**ADLC Step:** 1 – Requirements Generation  
+**Technology Stack:** Java 17, Spring Boot 3.x, PostgreSQL, Spring Security + JWT, Spring Boot Events
 
 ---
 
 ## Table of Contents
 
-1. [Project Overview](#1-project-overview)
-2. [Stakeholders & User Roles](#2-stakeholders--user-roles)
-3. [Functional Requirements](#3-functional-requirements)
-4. [Non-Functional Requirements](#4-non-functional-requirements)
-5. [AI/ML Requirements](#5-aiml-requirements)
-6. [Data Requirements](#6-data-requirements)
-7. [System Integration Requirements](#7-system-integration-requirements)
-8. [Security Requirements](#8-security-requirements)
-9. [Compliance & Regulatory Requirements](#9-compliance--regulatory-requirements)
-10. [UI/UX Requirements](#10-uiux-requirements)
-11. [Constraints & Assumptions](#11-constraints--assumptions)
-12. [Acceptance Criteria Summary](#12-acceptance-criteria-summary)
+1. [Functional Requirements](#1-functional-requirements)
+2. [Non-Functional Requirements](#2-non-functional-requirements)
+3. [System Actors](#3-system-actors)
+4. [Service Responsibilities](#4-service-responsibilities)
+5. [Event Flow Description](#5-event-flow-description)
+6. [Data Entities Overview](#6-data-entities-overview)
 
 ---
 
-## 1. Project Overview
+## 1. Functional Requirements
 
-### 1.1 Purpose
-SecureClaims AI is an AI-powered insurance claims processing platform designed to automate and enhance the end-to-end insurance claims lifecycle. The platform leverages machine learning (ML), natural language processing (NLP), and computer vision to accelerate claim adjudication, detect fraudulent claims, assess risk, and deliver consistent, auditable decisions.
+### 1.1 Identity Service – Authentication & Authorization
 
-### 1.2 Goals
-- Reduce average claims processing time from days to minutes.
-- Detect fraudulent claims with ≥ 92% precision before payout.
-- Provide explainable AI decisions that meet regulatory audit requirements.
-- Support health, auto, property, and life insurance claim types.
-- Enable seamless integration with legacy insurance core systems.
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-001 | The system shall allow a new user to register with a unique email address, username, and password. | High |
+| FR-002 | The system shall hash user passwords using BCrypt before persisting to the database. | High |
+| FR-003 | The system shall authenticate registered users via a POST /auth/login endpoint accepting email and password. | High |
+| FR-004 | The system shall issue a signed JWT access token upon successful authentication. | High |
+| FR-005 | The JWT token shall contain the user's ID, username, roles, and expiry timestamp as claims. | High |
+| FR-006 | The system shall validate JWT tokens on every protected API request via a Spring Security filter chain. | High |
+| FR-007 | The system shall support two roles: USER and ADMIN. | High |
+| FR-008 | The system shall allow an ADMIN to retrieve a list of all registered users. | Medium |
+| FR-009 | The system shall allow an ADMIN to deactivate or reactivate a user account. | Medium |
+| FR-010 | The system shall return a 401 Unauthorized response for requests with missing or invalid JWT tokens. | High |
+| FR-011 | The system shall return a 403 Forbidden response when an authenticated user accesses a resource beyond their role. | High |
+| FR-012 | The system shall expose a GET /auth/me endpoint returning the profile of the currently authenticated user. | Medium |
+| FR-013 | The system shall store user credentials in a dedicated PostgreSQL schema (identity schema). | High |
 
-### 1.3 Scope
-The platform covers:
-- Claim submission and intake (digital and API-based)
-- Document ingestion and extraction (OCR, NLP)
-- AI-based fraud detection and risk scoring
-- Automated claim adjudication and routing
-- Human-in-the-loop review workflow
-- Analytics dashboard for operations and compliance
-- RESTful API for third-party integrations
+### 1.2 Claims Service – Claim Lifecycle Management
 
-### 1.4 Out of Scope (v1.0)
-- Policy issuance or underwriting
-- Direct payment processing (integration with payment gateway is in scope; processing is not)
-- Mobile native applications (mobile-responsive web is in scope)
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-014 | The system shall allow an authenticated USER to submit a new insurance claim via POST /claims. | High |
+| FR-015 | A claim submission shall require: policy number, claim type, incident date, description, and claimed amount. | High |
+| FR-016 | The system shall assign a unique claim ID and set initial status to SUBMITTED upon claim creation. | High |
+| FR-017 | The system shall allow an authenticated USER to retrieve all their own submitted claims via GET /claims. | High |
+| FR-018 | The system shall allow an authenticated USER to retrieve a specific claim by ID via GET /claims/{id}. | High |
+| FR-019 | The system shall allow an ADMIN to retrieve all claims across all users via GET /admin/claims. | High |
+| FR-020 | The system shall allow an ADMIN to manually update the status of any claim via PUT /admin/claims/{id}/status. | High |
+| FR-021 | Valid claim statuses shall be: SUBMITTED, UNDER_REVIEW, FRAUD_CHECK, APPROVED, REJECTED, CLOSED. | High |
+| FR-022 | The system shall allow an authenticated USER to upload PDF documents for a claim via POST /claims/{id}/documents. | High |
+| FR-023 | Uploaded documents shall be stored in the local file system under uploads/claims/{claimId}/. | High |
+| FR-024 | The system shall store only file metadata (filename, file path, MIME type, upload timestamp) in the database; not the file binary. | High |
+| FR-025 | The system shall reject document uploads that are not PDF or supported image formats, returning a 400 Bad Request. | Medium |
+| FR-026 | The system shall allow an authenticated USER to list all documents associated with their claim via GET /claims/{id}/documents. | Medium |
+| FR-027 | The system shall publish a ClaimCreatedEvent after a claim is successfully persisted, triggering downstream processing. | High |
+| FR-028 | The system shall publish a ClaimStatusUpdatedEvent whenever a claim's status changes. | High |
+
+### 1.3 Fraud Detection Service – Rule-Based Risk Scoring
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-029 | The system shall evaluate every new claim for fraud risk upon receiving a ClaimCreatedEvent. | High |
+| FR-030 | The fraud engine shall assess risk based on three factors: claimed amount, policy age, and user claim history. | High |
+| FR-031 | The fraud engine shall classify each claim as LOW, MEDIUM, or HIGH risk based on the combined score. | High |
+| FR-032 | Risk scoring rules shall be: amount > $50,000 adds high weight; policy age < 6 months adds medium weight; more than 3 prior claims in 12 months adds high weight. | High |
+| FR-033 | The system shall persist the fraud analysis result (risk score, risk level, analysis timestamp) linked to the claim ID. | High |
+| FR-034 | The system shall publish a FraudAnalysisCompletedEvent after completing the fraud analysis. | High |
+| FR-035 | The system shall allow an ADMIN to retrieve the fraud analysis result for any claim via GET /admin/fraud/{claimId}. | Medium |
+| FR-036 | Claims flagged as HIGH risk shall automatically transition to REJECTED status unless overridden by an ADMIN. | Medium |
+| FR-037 | Claims flagged as LOW or MEDIUM risk shall transition to UNDER_REVIEW status for further processing. | High |
+
+### 1.4 Notification Service – User Alerts
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-038 | The system shall send a notification to the user when their claim is successfully submitted (ClaimCreatedEvent). | High |
+| FR-039 | The system shall send a notification to the user when fraud analysis is completed (FraudAnalysisCompletedEvent). | High |
+| FR-040 | The system shall send a notification to the user whenever their claim status changes (ClaimStatusUpdatedEvent). | High |
+| FR-041 | Notifications shall be delivered via simulated email and SMS output to the application console/logs. | High |
+| FR-042 | The system shall persist notification records (type, recipient, message, timestamp, delivery status) in the database. | Medium |
+| FR-043 | The system shall allow an ADMIN to retrieve notification history for any user via GET /admin/notifications/{userId}. | Low |
+| FR-044 | The Notification Service shall be designed with an abstraction layer to allow future integration with real email/SMS providers (e.g., SendGrid, Twilio). | Low |
+
+
 
 ---
 
-## 2. Stakeholders & User Roles
+## 2. Non-Functional Requirements
 
-### 2.1 User Roles
+### 2.1 Security
 
-| Role | Description | Access Level |
-|---|---|---|
-| **Claimant** | Policyholder or authorized representative submitting a claim | Self-service portal: submit, track, upload documents |
-| **Claims Adjudicator** | Insurance staff who review and decide on claims | Full claim view, approve/reject/escalate, add notes |
-| **Fraud Analyst** | Specialist reviewing flagged suspicious claims | Access to fraud queue, model explanations, case history |
-| **Claims Supervisor** | Manages adjudicator workload and escalations | All adjudicator access + team assignment, SLA monitoring |
-| **Compliance Officer** | Ensures regulatory adherence and audit trails | Read-only access to all claims, full audit log |
-| **Data Scientist / ML Engineer** | Maintains and retrains AI/ML models | Model management console, training data access, metrics |
-| **System Administrator** | Manages platform configuration, users, integrations | Full administrative access |
-| **API Consumer (Third Party)** | External systems (brokers, TPAs, hospitals) integrating via API | Scoped API key access per integration agreement |
+| ID | Requirement |
+|----|-------------|
+| NFR-001 | All REST API endpoints (except /auth/register and /auth/login) shall require a valid JWT token. |
+| NFR-002 | JWT tokens shall be signed using HMAC-SHA256 and expire after a configurable duration (default: 24 hours). |
+| NFR-003 | Passwords shall never be stored or logged in plain text; BCrypt hashing is mandatory. |
+| NFR-004 | Sensitive configuration values (database credentials, JWT secret) shall be externalized via environment variables and never hardcoded. |
+| NFR-005 | The system shall enforce role-based access control; USER role cannot access ADMIN endpoints. |
+| NFR-006 | The system shall sanitize all user inputs to prevent SQL injection and other injection attacks. |
+| NFR-007 | File uploads shall be validated for type and size before being written to the local file system. |
 
-### 2.2 Role-Based Permissions Matrix
+### 2.2 Performance
 
-| Feature | Claimant | Adjudicator | Fraud Analyst | Supervisor | Compliance | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Submit Claim | ✅ | — | — | — | — | ✅ |
-| View Own Claim | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| View All Claims | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Approve / Reject Claim | — | ✅ | — | ✅ | — | ✅ |
-| View Fraud Score | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Manage Users | — | — | — | — | — | ✅ |
-| Access Audit Logs | — | — | — | — | ✅ | ✅ |
-| Manage ML Models | — | — | — | — | — | ✅ (delegated to ML Eng) |
+| ID | Requirement |
+|----|-------------|
+| NFR-008 | REST API endpoints shall respond within 500ms for read operations under normal load (single developer/test environment). |
+| NFR-009 | Claim submission and fraud analysis shall complete end-to-end within 3 seconds under normal load. |
+| NFR-010 | The system shall support at least 20 concurrent users in the local deployment environment. |
 
----
+### 2.3 Reliability & Availability
 
-## 3. Functional Requirements
+| ID | Requirement |
+|----|-------------|
+| NFR-011 | Spring Boot Actuator health endpoints (/actuator/health) shall be exposed and return service health status. |
+| NFR-012 | The system shall implement a simple retry mechanism using Spring Scheduler for failed in-memory event deliveries. |
+| NFR-013 | All unhandled exceptions shall be caught by a global exception handler and return structured JSON error responses. |
+| NFR-014 | The system shall log all application errors at ERROR level with stack traces using SLF4J + Logback. |
 
-### 3.1 Claim Submission & Intake
+### 2.4 Maintainability
 
-**FR-001** The system shall allow claimants to submit new insurance claims via a web portal without requiring software installation.
+| ID | Requirement |
+|----|-------------|
+| NFR-015 | Each microservice shall be independently deployable as a standalone Spring Boot application. |
+| NFR-016 | All REST APIs shall be documented using OpenAPI 3.0 / Swagger UI accessible at /swagger-ui.html. |
+| NFR-017 | Code shall follow standard Java naming conventions and include Javadoc for all public service classes and methods. |
+| NFR-018 | Each service shall maintain its own Maven module with independent pom.xml dependency management. |
 
-**FR-002** The system shall support claim submission for the following insurance types: health, auto, property, and life.
+### 2.5 Testability
 
-**FR-003** The system shall allow claimants to upload supporting documents in PDF, JPG, PNG, DOCX, and XLSX formats up to 50 MB per file.
+| ID | Requirement |
+|----|-------------|
+| NFR-019 | Unit tests shall be written using JUnit 5 and Mockito, achieving a minimum of 80% code coverage for service layer classes. |
+| NFR-020 | Integration tests shall use Spring Boot Test with an in-memory H2 database or Testcontainers for PostgreSQL. |
+| NFR-021 | All event publishing and handling logic shall have dedicated unit tests verifying event payload correctness. |
 
-**FR-004** The system shall validate all required claim fields at the point of submission and return specific, actionable validation error messages.
+### 2.6 Scalability & Portability
 
-**FR-005** The system shall assign a unique Claim Reference Number (CRN) to every submitted claim and surface it immediately to the claimant.
+| ID | Requirement |
+|----|-------------|
+| NFR-022 | Each microservice shall be Docker-ready with a Dockerfile, enabling optional containerized local deployment. |
+| NFR-023 | The database schema-per-service design shall ensure no cross-service table dependencies, supporting independent scaling. |
+| NFR-024 | The Spring Boot Events (in-memory) communication model shall be designed for future migration to an external message broker (e.g., Apache Kafka) with minimal code changes. |
 
-**FR-006** The system shall send an automated email/SMS acknowledgement to the claimant upon successful claim submission, including the CRN and estimated processing timeline.
 
-**FR-007** The system shall allow claimants to save a claim as a draft and resume submission within 30 days.
-
-**FR-008** The system shall support bulk claim submission via API for enterprise/TPA partners (CSV or JSON payload).
-
-### 3.2 Document Processing & Extraction
-
-**FR-009** The system shall automatically extract structured data from uploaded documents using OCR and NLP, including dates, amounts, provider names, policy numbers, and diagnosis codes.
-
-**FR-010** The system shall support extraction from scanned PDFs (image-based) with a minimum OCR accuracy of 95% for standard document types.
-
-**FR-011** The system shall flag documents with low confidence extraction scores (< 80%) for manual review.
-
-**FR-012** The system shall detect and redact Personally Identifiable Information (PII) in documents before storing them in non-secured tiers.
-
-**FR-013** The system shall classify each uploaded document by type (e.g., Medical Bill, Police Report, Repair Estimate, Death Certificate) automatically.
-
-**FR-014** The system shall support multi-language document processing for English, Spanish, and French (v1.0); additional languages in v2.0.
-
-### 3.3 AI-Powered Fraud Detection
-
-**FR-015** The system shall compute a Fraud Risk Score (0–100) for every submitted claim using the fraud detection ML model.
-
-**FR-016** The system shall automatically route claims with a Fraud Risk Score ≥ 75 to the fraud investigation queue.
-
-**FR-017** The system shall provide a human-readable explanation for each fraud risk score, citing the top contributing factors (e.g., "Claim submitted 2 hours after policy purchase," "Provider flagged in prior fraud cases").
-
-**FR-018** The system shall detect the following fraud patterns at minimum:
-  - Duplicate claim submissions (same incident, same claimant)
-  - Claims from blacklisted providers or claimants
-  - Anomalous claim amounts relative to policy and historical norms
-  - Claims submitted immediately after policy inception
-  - Identity inconsistencies across documents
-  - Claim frequency anomalies (excessive claims in short period)
-
-**FR-019** The system shall allow Fraud Analysts to provide feedback on fraud decisions (true positive / false positive), which feeds back into model retraining.
-
-**FR-020** The system shall maintain a searchable fraud case history per claimant and provider.
-
-### 3.4 Risk Assessment & Scoring
-
-**FR-021** The system shall compute a Claim Severity Score and a Liability Score for each claim to assist in prioritization.
-
-**FR-022** The system shall flag claims that exceed policy coverage limits and notify adjudicators of the discrepancy.
-
-**FR-023** The system shall cross-reference claim details against the active policy to validate coverage eligibility before routing for adjudication.
-
-**FR-024** The system shall perform automated subrogation analysis to identify claims where third-party liability may exist.
-
-### 3.5 Claim Adjudication & Routing
-
-**FR-025** The system shall auto-adjudicate low-risk claims (Fraud Risk Score < 25, Severity Score < 30, within policy limits) without human intervention.
-
-**FR-026** The system shall route medium-risk claims to available adjudicators based on workload balancing and specialization.
-
-**FR-027** The system shall route high-risk or complex claims (multiple parties, large amounts, legal involvement) to senior adjudicators or supervisors.
-
-**FR-028** The system shall allow adjudicators to approve, partially approve, reject, or escalate any claim, with a mandatory reason code selection and free-text notes.
-
-**FR-029** The system shall enforce SLA timers per claim type, sending alerts when claims approach or breach defined SLA thresholds.
-
-**FR-030** The system shall generate a decision letter (PDF) automatically upon claim resolution, incorporating the decision rationale and any applicable regulatory disclosures.
-
-### 3.6 Human-in-the-Loop Review
-
-**FR-031** The system shall provide adjudicators with a unified claim review interface showing: claim details, extracted data, document previews, AI scores, and model explanations side by side.
-
-**FR-032** The system shall allow adjudicators to override AI recommendations with an override reason, which is logged and auditable.
-
-**FR-033** The system shall allow adjudicators to request additional information from claimants through the platform, pausing the SLA timer during the waiting period.
-
-**FR-034** The system shall notify claimants via email/SMS when additional information is requested, with a secure upload link.
-
-### 3.7 Notifications & Communications
-
-**FR-035** The system shall send automated status update notifications to claimants at each major claim lifecycle stage: Received, In Review, Additional Info Requested, Decision Made.
-
-**FR-036** The system shall allow adjudicators to send ad-hoc messages to claimants through the platform (all communications logged).
-
-**FR-037** The system shall support configurable notification templates (email/SMS) that administrators can manage without code changes.
-
-### 3.8 Analytics & Reporting
-
-**FR-038** The system shall provide an operational dashboard displaying real-time metrics: claims received today, pending queue size, average processing time, auto-adjudication rate, fraud detection rate.
-
-**FR-039** The system shall provide pre-built reports: Monthly Claims Summary, Fraud Detection Report, SLA Compliance Report, Adjudicator Performance Report.
-
-**FR-040** The system shall allow supervisors and compliance officers to export any report in CSV and PDF formats.
-
-**FR-041** The system shall provide trend analysis for fraud patterns, claim volumes, and processing times over configurable date ranges.
-
-**FR-042** The system shall provide an ML model performance dashboard showing: precision, recall, F1 score, AUC-ROC, and model drift indicators.
-
-### 3.9 Audit Trail & Logging
-
-**FR-043** The system shall maintain an immutable audit log for every action performed on a claim: who, what, when, and the system state before and after.
-
-**FR-044** The system shall log all AI model predictions, input features, and output scores alongside the claim record.
-
-**FR-045** The system shall provide compliance officers with a searchable audit log interface filterable by user, claim, action type, and date range.
-
-**FR-046** The system shall retain audit logs for a minimum of 7 years in compliance with insurance regulatory requirements.
 
 ---
 
-## 4. Non-Functional Requirements
+## 3. System Actors
 
-### 4.1 Performance
-
-**NFR-001** The web portal shall load any page within 2 seconds under normal load (up to 500 concurrent users).
-
-**NFR-002** Claim submission (excluding document upload) shall complete within 3 seconds end-to-end.
-
-**NFR-003** Document OCR and data extraction shall complete within 30 seconds per document (≤ 10 MB).
-
-**NFR-004** Fraud risk scoring shall complete within 5 seconds of claim submission for standard claims.
-
-**NFR-005** The system shall support processing of at least 10,000 claims per day without degradation.
-
-**NFR-006** API endpoints shall respond within 500ms at the 95th percentile under rated load.
-
-### 4.2 Scalability
-
-**NFR-007** The system architecture shall support horizontal scaling of all stateless components (API, inference services, workers).
-
-**NFR-008** The system shall auto-scale compute resources in response to claim volume spikes up to 3x the baseline load.
-
-**NFR-009** The document processing pipeline shall support parallel processing of up to 1,000 simultaneous document extraction jobs.
-
-**NFR-010** The database layer shall be capable of handling 50 million claim records without performance degradation.
-
-### 4.3 Availability & Reliability
-
-**NFR-011** The platform shall maintain 99.9% uptime (≤ 8.7 hours downtime per year) for the production environment.
-
-**NFR-012** Planned maintenance windows shall not exceed 4 hours per month and shall be scheduled outside business hours.
-
-**NFR-013** The system shall implement automated health checks and self-healing for failed service instances.
-
-**NFR-014** All critical data shall be replicated to a secondary region with Recovery Point Objective (RPO) ≤ 1 hour and Recovery Time Objective (RTO) ≤ 4 hours.
-
-### 4.4 Maintainability
-
-**NFR-015** The system shall be deployed using containerized microservices (Docker/Kubernetes) to enable independent service upgrades.
-
-**NFR-016** ML models shall be deployable via a model registry without system downtime (blue/green or canary deployment).
-
-**NFR-017** All system components shall expose structured logs (JSON) compatible with centralized log aggregation (e.g., CloudWatch, ELK).
-
-**NFR-018** The codebase shall maintain a minimum test coverage of 80% for backend services.
+| Actor | Type | Description |
+|-------|------|-------------|
+| **Guest** | External Human | An unauthenticated visitor who can only access the registration and login endpoints. No access to protected resources. |
+| **User (Policyholder)** | External Human | An authenticated individual with the USER role. Can submit claims, upload documents, view their own claims and their status, and receive notifications. |
+| **Admin** | External Human | An authenticated individual with the ADMIN role. Can view all claims, update claim statuses, view fraud analysis results, manage users, and retrieve notification histories. |
+| **Identity Service** | Internal System | Handles user registration, authentication, JWT issuance and validation, and role management. Acts as the security authority for the platform. |
+| **Claims Service** | Internal System | Manages the full claim lifecycle from submission through final resolution. Publishes domain events to trigger downstream services. |
+| **Fraud Detection Service** | Internal System | An event-driven internal service that consumes ClaimCreatedEvent, performs rule-based risk scoring, persists results, and publishes FraudAnalysisCompletedEvent. |
+| **Notification Service** | Internal System | Consumes domain events (ClaimCreatedEvent, FraudAnalysisCompletedEvent, ClaimStatusUpdatedEvent) and delivers simulated notifications to users via console/log output. |
+| **File System** | External System | Local operating system file storage used to persist uploaded claim documents under uploads/claims/{claimId}/. |
+| **PostgreSQL Database** | External System | Relational database providing isolated schema storage for each microservice. |
 
 ---
 
-## 5. AI/ML Requirements
+## 4. Service Responsibilities
 
-### 5.1 Fraud Detection Model
+### 4.1 Identity Service
 
-**ML-001** The fraud detection model shall achieve a minimum precision of 92% and recall of 85% on the held-out test set.
+**Purpose:** Central authentication and authorization authority for the platform.
 
-**ML-002** The model shall use a combination of structured claim features and NLP-derived features from free-text fields and documents.
+**Responsibilities:**
+- Expose `POST /auth/register` – accepts user registration payload, validates uniqueness, hashes password, persists user with default USER role.
+- Expose `POST /auth/login` – validates credentials, generates and returns a signed JWT token.
+- Expose `GET /auth/me` – returns the profile of the currently authenticated user (extracted from JWT).
+- Provide a Spring Security JWT filter that intercepts all incoming requests, validates the token, and populates the SecurityContext.
+- Manage user roles (USER, ADMIN) and enforce role-based access control across all services.
+- Expose `GET /admin/users` – ADMIN only; returns paginated list of all registered users.
+- Expose `PUT /admin/users/{id}/status` – ADMIN only; activates or deactivates a user account.
+- Store all user and role data in the `identity` PostgreSQL schema.
 
-**ML-003** The model shall support online learning or scheduled retraining (minimum monthly) using newly labeled claim outcomes.
-
-**ML-004** The model shall be explainable via SHAP values or equivalent technique, surfacing the top 5 contributing features per prediction.
-
-**ML-005** The model shall operate in real-time inference mode with p95 latency ≤ 500ms.
-
-**ML-006** The system shall detect and alert on model drift when feature distribution shifts exceed a configurable threshold (default: PSI > 0.2).
-
-### 5.2 Document Intelligence
-
-**ML-007** The document classification model shall classify documents into at least 15 predefined categories with ≥ 90% accuracy.
-
-**ML-008** The NLP extraction pipeline shall extract structured entities (dates, monetary amounts, ICD codes, provider names, policy numbers) with ≥ 95% F1 score on the validation set.
-
-**ML-009** The system shall use a pre-trained Large Language Model (LLM) for unstructured text summarization of claim narratives, generating a 3–5 sentence summary for adjudicators.
-
-**ML-010** All LLM-generated summaries shall be flagged as AI-generated and shall not substitute for the original document in legal/regulatory contexts.
-
-### 5.3 Risk Scoring
-
-**ML-011** The claim severity scoring model shall categorize claims into Low / Medium / High / Critical tiers with documented scoring criteria.
-
-**ML-012** All ML models shall be versioned, and the model version used for each prediction shall be recorded in the audit log.
-
-**ML-013** The system shall maintain a model registry storing model artifacts, training metadata, evaluation metrics, and deployment history.
-
-### 5.4 Model Governance
-
-**ML-014** All models must pass a bias and fairness evaluation before production deployment, with no statistically significant disparate impact across protected demographic groups.
-
-**ML-015** A model card shall be maintained for each production model, documenting intended use, limitations, performance metrics, and fairness evaluations.
-
-**ML-016** The ML team shall conduct a quarterly model review including performance trends, bias assessment, and retraining decisions.
+**Technology:** Java 17, Spring Boot 3.x, Spring Security, JWT (jjwt library), Spring Data JPA, PostgreSQL.
 
 ---
 
-## 6. Data Requirements
+### 4.2 Claims Service
 
-### 6.1 Data Ingestion
+**Purpose:** Core service managing the entire insurance claim lifecycle.
 
-**DR-001** The system shall ingest claim data from web form submissions, REST API, and batch file uploads (CSV/JSON).
+**Responsibilities:**
+- Expose `POST /claims` – authenticated USER submits a new claim; assign unique ID, set status to SUBMITTED, persist, and publish `ClaimCreatedEvent`.
+- Expose `GET /claims` – authenticated USER retrieves all their own claims with pagination support.
+- Expose `GET /claims/{id}` – authenticated USER retrieves a specific claim; validates ownership.
+- Expose `PUT /admin/claims/{id}/status` – ADMIN only; manually transitions claim to any valid status and publishes `ClaimStatusUpdatedEvent`.
+- Expose `GET /admin/claims` – ADMIN only; retrieves all claims with filtering and pagination.
+- Expose `POST /claims/{id}/documents` – authenticated USER uploads a PDF/image document; save file to `uploads/claims/{claimId}/`; persist metadata to database.
+- Expose `GET /claims/{id}/documents` – authenticated USER lists all documents for a claim.
+- Publish `ClaimCreatedEvent` after successful claim persistence.
+- Publish `ClaimStatusUpdatedEvent` after any claim status transition.
+- Listen for `FraudAnalysisCompletedEvent` to automatically update claim status based on fraud risk level.
+- Store all claim and document data in the `claims` PostgreSQL schema.
 
-**DR-002** The system shall ingest policy data from the core insurance system via scheduled ETL jobs (minimum daily sync) or real-time event streams.
-
-**DR-003** The system shall integrate with external databases for blacklist/watchlist checks (NICB, ISO ClaimSearch equivalent).
-
-### 6.2 Data Storage
-
-**DR-004** Claim records and metadata shall be stored in a relational database with full ACID compliance.
-
-**DR-005** Uploaded documents shall be stored in encrypted object storage with server-side encryption (AES-256).
-
-**DR-006** ML training datasets shall be stored in a governed data lake with versioning and lineage tracking.
-
-**DR-007** Personally Identifiable Information (PII) fields shall be encrypted at rest using field-level encryption.
-
-**DR-008** The system shall implement data tiering: hot storage for active claims (< 2 years), warm storage for closed claims (2–7 years), cold/archive storage (> 7 years).
-
-### 6.3 Data Quality
-
-**DR-009** The system shall validate incoming data against defined schemas and reject malformed records with structured error responses.
-
-**DR-010** The system shall maintain data quality metrics (completeness, accuracy, consistency) visible in the admin dashboard.
-
-**DR-011** Duplicate claim detection shall run at ingestion time to prevent the same claim from being processed more than once.
-
-### 6.4 Data Governance
-
-**DR-012** All personal data shall be classified and tagged according to sensitivity level (Public, Internal, Confidential, Restricted).
-
-**DR-013** The system shall support right-to-erasure requests, pseudonymizing or deleting personal data within 30 days of a verified request, subject to legal hold exceptions.
-
-**DR-014** Data lineage shall be tracked for all data used in ML model training, including source, transformation steps, and version.
+**Technology:** Java 17, Spring Boot 3.x, Spring Web, Spring Data JPA, PostgreSQL, Spring ApplicationEventPublisher, local file system storage.
 
 ---
 
-## 7. System Integration Requirements
+### 4.3 Fraud Detection Service
 
-### 7.1 Core Insurance System (Policy Administration)
+**Purpose:** Automated rule-based risk assessment engine for submitted claims.
 
-**IR-001** The system shall integrate with the core policy administration system to retrieve active policy details, coverage limits, and exclusions in real time.
+**Responsibilities:**
+- Listen for `ClaimCreatedEvent` published by the Claims Service.
+- Retrieve relevant claim data: claimed amount, associated policy age, and the submitting user's claim history (count of claims in the past 12 months).
+- Apply the risk scoring rule engine:
+  - Claimed amount > $50,000 → adds HIGH weight (+3 points)
+  - Claimed amount $10,000–$50,000 → adds MEDIUM weight (+1 point)
+  - Policy age < 6 months → adds MEDIUM weight (+2 points)
+  - User has > 3 claims in the past 12 months → adds HIGH weight (+3 points)
+  - Total score 0–1 → LOW risk; 2–3 → MEDIUM risk; 4+ → HIGH risk
+- Persist the fraud analysis record: claim ID, risk score, risk level (LOW/MEDIUM/HIGH), analysis notes, timestamp.
+- Publish `FraudAnalysisCompletedEvent` with claim ID and risk level after analysis completes.
+- Expose `GET /admin/fraud/{claimId}` – ADMIN only; returns the fraud analysis result for a specific claim.
+- Store all fraud analysis data in the `fraud` PostgreSQL schema.
 
-**IR-002** The integration shall support REST API or message queue (Kafka/SQS) based communication with the core system.
-
-**IR-003** The system shall handle policy system unavailability gracefully, queuing claims for processing once connectivity is restored, with adjudicator notification.
-
-### 7.2 Payment Gateway
-
-**IR-004** The system shall integrate with the organization's payment gateway to trigger claim settlement payments upon approved claim decisions.
-
-**IR-005** Payment trigger events shall be recorded in the audit log with transaction reference numbers.
-
-### 7.3 Identity & Access Management
-
-**IR-006** The system shall support SSO via SAML 2.0 or OpenID Connect for internal staff users.
-
-**IR-007** Claimant portal authentication shall support username/password with mandatory MFA (TOTP or SMS OTP).
-
-**IR-008** The system shall integrate with an enterprise Identity Provider (IdP) such as Azure AD, Okta, or AWS IAM Identity Center.
-
-### 7.4 External Data Sources
-
-**IR-009** The system shall integrate with vehicle data APIs (e.g., VIN lookup) for auto insurance claim validation.
-
-**IR-010** The system shall integrate with weather data APIs for property claim validation (storm, flood, wildfire verification).
-
-**IR-011** The system shall integrate with medical code databases (ICD-10, CPT) for health claim validation.
-
-**IR-012** The system shall support integration with fraud intelligence networks (e.g., NICB, ISO) for cross-industry fraud signal enrichment.
-
-### 7.5 Notification Services
-
-**IR-013** The system shall integrate with an email service (e.g., Amazon SES, SendGrid) for transactional email delivery.
-
-**IR-014** The system shall integrate with an SMS gateway (e.g., Amazon SNS, Twilio) for SMS notifications.
-
-### 7.6 API Gateway
-
-**IR-015** All external-facing APIs shall be exposed through an API Gateway with rate limiting, authentication, and request logging.
-
-**IR-016** The public API shall be documented using OpenAPI 3.0 specification, available via a developer portal.
+**Technology:** Java 17, Spring Boot 3.x, Spring ApplicationEventListener, Spring Data JPA, PostgreSQL.
 
 ---
 
-## 8. Security Requirements
+### 4.4 Notification Service
 
-**SR-001** All data in transit shall be encrypted using TLS 1.2 or higher; TLS 1.0 and 1.1 shall be disabled.
+**Purpose:** User communication layer that delivers status updates and alerts.
 
-**SR-002** All data at rest shall be encrypted using AES-256.
+**Responsibilities:**
+- Listen for `ClaimCreatedEvent` → send a "Claim Received" notification to the submitting user.
+- Listen for `FraudAnalysisCompletedEvent` → send a "Claim Under Review" or "Claim Flagged" notification based on risk level.
+- Listen for `ClaimStatusUpdatedEvent` → send a "Claim Status Updated" notification with the new status.
+- Simulate email delivery by logging a formatted email message to the console via SLF4J.
+- Simulate SMS delivery by logging a formatted SMS message to the console via SLF4J.
+- Persist all notification records: recipient user ID, notification type, channel (EMAIL/SMS), message body, sent timestamp, delivery status (SENT/FAILED).
+- Expose `GET /admin/notifications/{userId}` – ADMIN only; retrieves notification history for a user.
+- Provide a `NotificationSender` interface to abstract delivery channels for future real provider integration.
+- Store all notification data in the `notifications` PostgreSQL schema.
 
-**SR-003** The system shall enforce the principle of least privilege for all user roles and service accounts.
+**Technology:** Java 17, Spring Boot 3.x, Spring ApplicationEventListener, Spring Data JPA, PostgreSQL, SLF4J + Logback.
 
-**SR-004** API authentication shall use OAuth 2.0 / JWT tokens with a maximum token lifetime of 1 hour; refresh tokens shall be rotatable.
 
-**SR-005** The system shall implement rate limiting on all public endpoints to prevent brute-force and DDoS attacks.
-
-**SR-006** All user passwords shall be hashed using bcrypt or Argon2 with a minimum work factor of 12.
-
-**SR-007** The system shall enforce Multi-Factor Authentication (MFA) for all internal staff accounts.
-
-**SR-008** The system shall conduct automated vulnerability scanning (SAST/DAST) as part of the CI/CD pipeline; critical and high findings shall block deployment.
-
-**SR-009** The system shall log all authentication attempts (successful and failed) and alert on ≥ 5 consecutive failed login attempts from the same IP within 10 minutes.
-
-**SR-010** The system shall implement Content Security Policy (CSP), HSTS, X-Frame-Options, and other OWASP-recommended HTTP security headers.
-
-**SR-011** Secrets (API keys, database credentials) shall be managed via a secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault) and shall never be stored in source code or environment files.
-
-**SR-012** The system shall undergo an annual third-party penetration test; critical findings shall be remediated within 30 days.
 
 ---
 
-## 9. Compliance & Regulatory Requirements
+## 5. Event Flow Description
 
-### 9.1 Data Privacy
+The system uses Spring Boot's in-memory `ApplicationEventPublisher` / `@EventListener` mechanism for asynchronous inter-service communication. No external message broker is required.
 
-**CR-001** The system shall comply with GDPR for any processing of EU resident data, including lawful basis documentation, data subject rights, and data processing agreements with sub-processors.
+### 5.1 Event: ClaimCreatedEvent
 
-**CR-002** The system shall comply with HIPAA for any Protected Health Information (PHI) processed in health insurance claims, including BAA agreements with all sub-processors.
+**Trigger:** A user successfully submits a new insurance claim.  
+**Publisher:** Claims Service  
+**Consumers:** Fraud Detection Service, Notification Service
 
-**CR-003** The system shall comply with applicable state insurance data privacy laws (e.g., CCPA for California residents).
+**Payload:**
+```json
+{
+  "eventId": "uuid",
+  "claimId": "uuid",
+  "userId": "uuid",
+  "policyNumber": "string",
+  "claimType": "string",
+  "claimedAmount": "decimal",
+  "policyAgeMonths": "integer",
+  "submittedAt": "ISO-8601 timestamp"
+}
+```
 
-### 9.2 Insurance Regulatory
-
-**CR-004** Automated claim decisions shall comply with applicable state insurance regulations regarding automated decision-making, including required human review thresholds.
-
-**CR-005** Decision letters generated by the system shall include all regulatory disclosures required by state insurance departments (e.g., right to appeal, regulatory contact information).
-
-**CR-006** The system shall maintain records sufficient to support regulatory examinations, including complete claim histories and AI decision logs.
-
-### 9.3 AI Governance & Fairness
-
-**CR-007** AI models used in claim decisions shall be documented and auditable per emerging AI governance frameworks (e.g., NIST AI RMF, EU AI Act requirements).
-
-**CR-008** The system shall not use protected characteristics (race, gender, religion, national origin) as direct model features in fraud or risk scoring.
-
-**CR-009** An annual fairness audit shall be conducted on all production AI models, with results documented and retained.
-
-### 9.4 Organizational Standards
-
-**CR-010** The system shall achieve SOC 2 Type II certification within 18 months of production go-live.
-
-**CR-011** The system shall maintain an information security policy and incident response plan, with annual reviews.
-
----
-
-## 10. UI/UX Requirements
-
-**UX-001** The claimant portal shall be fully responsive and usable on desktop (1920×1080), tablet (768px), and mobile (375px) screen sizes.
-
-**UX-002** The platform shall meet WCAG 2.1 Level AA accessibility standards.
-
-**UX-003** The adjudicator workbench shall display all claim information, documents, and AI insights on a single screen without requiring horizontal scrolling.
-
-**UX-004** Document previews shall be rendered inline within the claim review screen without requiring file downloads.
-
-**UX-005** The system shall display progress indicators for all long-running operations (document upload, processing, OCR extraction).
-
-**UX-006** All error messages shall be user-friendly, avoiding technical jargon, and shall guide the user to the corrective action.
-
-**UX-007** The platform shall support dark mode and light mode, persisting the user's preference.
-
-**UX-008** The claimant portal shall complete task flows (submit claim, upload documents, check status) in no more than 5 steps.
-
-**UX-009** The system shall display AI-generated fraud scores and explanations in a visually clear format (e.g., score gauge, ranked factor list) accessible to non-technical adjudicators.
+**Flow:**
+```
+User → POST /claims
+         │
+         ▼
+  Claims Service
+  [Persist claim, status = SUBMITTED]
+         │
+         ▼
+  Publish ClaimCreatedEvent
+         │
+         ├──► Fraud Detection Service
+         │    [Run risk scoring engine]
+         │    [Persist FraudAnalysis record]
+         │    [Publish FraudAnalysisCompletedEvent]
+         │
+         └──► Notification Service
+              [Log simulated email: "Your claim #<id> has been received."]
+              [Persist Notification record]
+```
 
 ---
 
-## 11. Constraints & Assumptions
+### 5.2 Event: FraudAnalysisCompletedEvent
 
-### 11.1 Technical Constraints
+**Trigger:** Fraud Detection Service completes risk scoring for a claim.  
+**Publisher:** Fraud Detection Service  
+**Consumers:** Claims Service, Notification Service
 
-- The platform will be deployed on AWS (primary cloud provider).
-- The backend will be built using SpringBoot-based microservices.
-- The frontend will be a React-based single-page application.
-- All ML model serving will use containerized inference endpoints (e.g., AWS SageMaker Endpoints or self-hosted containers).
-- The relational database will be PostgreSQL (managed, e.g., Amazon RDS Aurora).
+**Payload:**
+```json
+{
+  "eventId": "uuid",
+  "claimId": "uuid",
+  "userId": "uuid",
+  "riskScore": "integer",
+  "riskLevel": "LOW | MEDIUM | HIGH",
+  "analysisNotes": "string",
+  "analyzedAt": "ISO-8601 timestamp"
+}
+```
 
-### 11.2 Business Constraints
-
-- The v1.0 release must be production-ready within 12 months of project kickoff.
-- The system must support a minimum of 3 insurance lines in v1.0: health, auto, and property.
-- Life insurance support is deferred to v2.0.
-- All automated decisions must have a human override path; fully autonomous claims payment is not permitted in v1.0.
-
-### 11.3 Assumptions
-
-- The organization has an existing core policy administration system accessible via API.
-- Training data (historical claims with outcomes) is available, cleaned, and labeled for initial model training (minimum 100,000 labeled records).
-- The organization will provide subject matter experts (claims adjusters, fraud specialists) for model validation and UAT.
-- Regulatory review of AI decision logic will be conducted by the organization's legal/compliance team before go-live.
-- Third-party integrations (payment gateway, IdP, external data APIs) will have accessible sandbox environments for development and testing.
-
-### 11.4 Dependencies
-
-| Dependency | Owner | Risk |
-|---|---|---|
-| Core policy system API availability | IT/Core Systems Team | High |
-| Historical claims training data | Data Engineering | High |
-| Payment gateway sandbox access | Finance/Vendor | Medium |
-| External fraud database API | Vendor (NICB/ISO) | Medium |
-| SSO/IdP configuration | IT Security | Medium |
-| Regulatory sign-off on AI decisions | Legal/Compliance | High |
-
----
-
-## 12. Acceptance Criteria Summary
-
-| Requirement Area | Key Acceptance Criteria |
-|---|---|
-| Claim Submission | Claimant can submit a claim end-to-end in under 5 minutes; CRN generated and emailed within 30 seconds |
-| Document Processing | OCR extracts data from standard documents with ≥ 95% accuracy; misclassified documents flagged within 30 sec |
-| Fraud Detection | Fraud score computed within 5 seconds; ≥ 92% precision on test set; top 5 explanatory factors shown |
-| Auto-Adjudication | Low-risk claims decided without human intervention within 2 minutes of submission |
-| Human Review | Adjudicator has all claim info, documents, and AI insights on one screen; can decide in ≤ 3 clicks |
-| Audit Trail | Every action logged immutably; compliance officer can export audit log for any claim within 60 seconds |
-| Performance | Portal loads in ≤ 2s; API responds in ≤ 500ms p95; 10,000 claims/day throughput sustained |
-| Security | MFA enforced for staff; all data encrypted in transit and at rest; no critical/high CVEs in CI/CD pipeline |
-| Compliance | GDPR/HIPAA controls implemented; AI model cards documented; SOC 2 Type II readiness audit passed |
-| Accessibility | WCAG 2.1 AA compliant; verified by automated and manual audit |
+**Flow:**
+```
+Fraud Detection Service
+[FraudAnalysisCompletedEvent published]
+         │
+         ├──► Claims Service
+         │    [if riskLevel == HIGH → set claim status = REJECTED]
+         │    [if riskLevel == LOW or MEDIUM → set claim status = UNDER_REVIEW]
+         │    [Publish ClaimStatusUpdatedEvent]
+         │
+         └──► Notification Service
+              [if HIGH: Log "Your claim has been flagged for review."]
+              [if LOW/MEDIUM: Log "Your claim is under review."]
+              [Persist Notification record]
+```
 
 ---
 
-*Document generated as part of the ADLC (AI-Driven Development Lifecycle) for SecureClaims AI.*  
-*Next phase: Architecture Design → `.kiro/architecture/`*
+### 5.3 Event: ClaimStatusUpdatedEvent
+
+**Trigger:** Any claim status transition (by ADMIN action or automated fraud result).  
+**Publisher:** Claims Service  
+**Consumers:** Notification Service
+
+**Payload:**
+```json
+{
+  "eventId": "uuid",
+  "claimId": "uuid",
+  "userId": "uuid",
+  "previousStatus": "string",
+  "newStatus": "string",
+  "updatedBy": "string (userId or SYSTEM)",
+  "updatedAt": "ISO-8601 timestamp"
+}
+```
+
+**Flow:**
+```
+Claims Service
+[ClaimStatusUpdatedEvent published]
+         │
+         └──► Notification Service
+              [Log simulated email: "Your claim #<id> status has changed to <newStatus>."]
+              [Persist Notification record]
+```
+
+---
+
+### 5.4 Complete End-to-End Event Flow
+
+```
+[1] User submits claim
+        │
+        ▼
+[2] Claims Service persists claim (status: SUBMITTED)
+        │
+        ▼
+[3] ClaimCreatedEvent published
+        │
+        ├── [4a] Notification Service → "Claim received" notification sent & persisted
+        │
+        └── [4b] Fraud Detection Service runs risk scoring
+                  │
+                  ▼
+             [5] FraudAnalysisCompletedEvent published
+                  │
+                  ├── [6a] Claims Service updates status
+                  │         HIGH → REJECTED (publishes ClaimStatusUpdatedEvent)
+                  │         LOW/MEDIUM → UNDER_REVIEW (publishes ClaimStatusUpdatedEvent)
+                  │
+                  └── [6b] Notification Service → "Fraud analysis result" notification sent
+                                │
+                                ▼
+                        [7] ClaimStatusUpdatedEvent consumed
+                                │
+                                └── Notification Service → "Status updated" notification sent
+```
+
+### 5.5 Retry Mechanism
+
+Failed event handler executions shall be retried using a Spring `@Scheduled` job that polls a `failed_events` log table and re-publishes events that have not been successfully processed within a configurable retry window (default: 3 retries, 30-second interval).
+
+
+
+---
+
+## 6. Data Entities Overview
+
+Each microservice owns its data exclusively. There are no cross-service foreign key constraints. References between services are by ID (UUID) only.
+
+### 6.1 Identity Service – Schema: `identity`
+
+#### Entity: `users`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, NOT NULL | Unique user identifier |
+| username | VARCHAR(50) | UNIQUE, NOT NULL | Login username |
+| email | VARCHAR(100) | UNIQUE, NOT NULL | User email address |
+| password_hash | VARCHAR(255) | NOT NULL | BCrypt-hashed password |
+| is_active | BOOLEAN | NOT NULL, DEFAULT true | Account active status |
+| created_at | TIMESTAMP | NOT NULL | Account creation timestamp |
+| updated_at | TIMESTAMP | NOT NULL | Last update timestamp |
+
+#### Entity: `roles`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, NOT NULL | Unique role identifier |
+| name | VARCHAR(20) | UNIQUE, NOT NULL | Role name: USER or ADMIN |
+
+#### Entity: `user_roles` (Join Table)
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| user_id | UUID | FK → users.id | Reference to user |
+| role_id | UUID | FK → roles.id | Reference to role |
+
+---
+
+### 6.2 Claims Service – Schema: `claims`
+
+#### Entity: `claims`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, NOT NULL | Unique claim identifier |
+| user_id | UUID | NOT NULL | Reference to submitting user (from identity service) |
+| policy_number | VARCHAR(50) | NOT NULL | Insurance policy number |
+| claim_type | VARCHAR(50) | NOT NULL | Type of claim (e.g., HEALTH, AUTO, PROPERTY) |
+| incident_date | DATE | NOT NULL | Date the incident occurred |
+| description | TEXT | NOT NULL | Detailed description of the claim |
+| claimed_amount | DECIMAL(15,2) | NOT NULL | Amount claimed in USD |
+| status | VARCHAR(30) | NOT NULL | Claim status (SUBMITTED, UNDER_REVIEW, FRAUD_CHECK, APPROVED, REJECTED, CLOSED) |
+| created_at | TIMESTAMP | NOT NULL | Claim submission timestamp |
+| updated_at | TIMESTAMP | NOT NULL | Last status update timestamp |
+
+#### Entity: `documents`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, NOT NULL | Unique document identifier |
+| claim_id | UUID | FK → claims.id, NOT NULL | Associated claim |
+| original_filename | VARCHAR(255) | NOT NULL | Original name of the uploaded file |
+| stored_filename | VARCHAR(255) | NOT NULL | System-generated stored filename |
+| file_path | VARCHAR(500) | NOT NULL | Full local file system path |
+| mime_type | VARCHAR(100) | NOT NULL | File MIME type (e.g., application/pdf) |
+| file_size_bytes | BIGINT | NOT NULL | File size in bytes |
+| uploaded_at | TIMESTAMP | NOT NULL | Upload timestamp |
+
+---
+
+### 6.3 Fraud Detection Service – Schema: `fraud`
+
+#### Entity: `fraud_analyses`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, NOT NULL | Unique analysis record identifier |
+| claim_id | UUID | UNIQUE, NOT NULL | Reference to the analyzed claim (from claims service) |
+| user_id | UUID | NOT NULL | Reference to the claim submitter (from identity service) |
+| claimed_amount | DECIMAL(15,2) | NOT NULL | Snapshot of claimed amount at analysis time |
+| policy_age_months | INTEGER | NOT NULL | Policy age in months at the time of analysis |
+| prior_claims_count | INTEGER | NOT NULL | Number of user claims in the prior 12 months |
+| risk_score | INTEGER | NOT NULL | Calculated numeric risk score |
+| risk_level | VARCHAR(10) | NOT NULL | Risk classification: LOW, MEDIUM, or HIGH |
+| analysis_notes | TEXT | | Human-readable scoring rationale |
+| analyzed_at | TIMESTAMP | NOT NULL | Timestamp of analysis completion |
+
+---
+
+### 6.4 Notification Service – Schema: `notifications`
+
+#### Entity: `notifications`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK, NOT NULL | Unique notification identifier |
+| user_id | UUID | NOT NULL | Reference to recipient user (from identity service) |
+| claim_id | UUID | | Reference to related claim, if applicable |
+| notification_type | VARCHAR(50) | NOT NULL | Type: CLAIM_RECEIVED, FRAUD_ANALYSIS_DONE, STATUS_UPDATED |
+| channel | VARCHAR(10) | NOT NULL | Delivery channel: EMAIL or SMS |
+| recipient_address | VARCHAR(255) | NOT NULL | Email address or phone number |
+| subject | VARCHAR(255) | | Notification subject (for email) |
+| message_body | TEXT | NOT NULL | Full notification message content |
+| delivery_status | VARCHAR(10) | NOT NULL | Delivery status: SENT or FAILED |
+| sent_at | TIMESTAMP | NOT NULL | Notification send timestamp |
+
+---
+
+### 6.5 Entity Relationship Summary
+
+```
+identity.users ──(user_id reference)──► claims.claims
+identity.users ──(user_id reference)──► fraud.fraud_analyses
+identity.users ──(user_id reference)──► notifications.notifications
+
+claims.claims ──(claim_id reference)──► fraud.fraud_analyses
+claims.claims ──(claim_id reference)──► notifications.notifications
+claims.claims ──(claim_id FK)────────► claims.documents
+```
+
+> Note: Cross-service references are by UUID value only. No database-level foreign key constraints span across schemas. Data consistency is maintained at the application/event level.
+
+---
+
+## Appendix: Technology Stack Summary
+
+| Layer | Technology |
+|-------|------------|
+| Language | Java 17 |
+| Framework | Spring Boot 3.x |
+| Web Layer | Spring Web (REST APIs) |
+| Security | Spring Security + JWT (jjwt) |
+| ORM | Spring Data JPA + Hibernate |
+| Database | PostgreSQL (schema-per-service) |
+| Event Bus | Spring Boot ApplicationEventPublisher (in-memory) |
+| File Storage | Local file system – uploads/claims/{claimId}/ |
+| API Docs | OpenAPI 3.0 / Swagger UI |
+| Logging | SLF4J + Logback |
+| Monitoring | Spring Boot Actuator |
+| Testing | JUnit 5 + Mockito + Spring Boot Test |
+| Build | Maven |
+| Deployment | Local / Docker-ready |
+
+---
+
+*Document generated as part of ADLC Step 1 – Requirements Generation for SecureClaims AI.*
