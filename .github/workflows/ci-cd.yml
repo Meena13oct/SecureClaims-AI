@@ -9,6 +9,7 @@ name: SecureClaims AI CI/CD
 # ------------------------------------------------------------------------------
 # Trigger: Run on every push and pull request to any branch
 # CD (deploy) job only runs on main branch pushes
+# Allow manual trigger via workflow_dispatch
 # ------------------------------------------------------------------------------
 on:
   push:
@@ -20,6 +21,12 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: 'development'      
 
 # ------------------------------------------------------------------------------
 # Environment variables used across jobs
