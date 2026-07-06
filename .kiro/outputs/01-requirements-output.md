@@ -526,6 +526,7 @@ claims.claims ──(claim_id FK)────────► claims.documents
 
 | Layer | Technology |
 |-------|------------|
+|IDE | Eclipse|
 | Language | Java 17 |
 | Framework | Spring Boot 3.x |
 | Web Layer | Spring Web (REST APIs) |
@@ -540,6 +541,7 @@ claims.claims ──(claim_id FK)────────► claims.documents
 | Testing | JUnit 5 + Mockito + Spring Boot Test |
 | Build | Maven |
 | Deployment | Local / Docker-ready |
+| Container | Docker |
 
 ---
 

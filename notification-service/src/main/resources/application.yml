@@ -1,0 +1,37 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/secureclaims
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: notifications
+    show-sql: true
+  flyway:
+    enabled: true
+    schemas: notifications
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: SecureClaimsAI-JWT-Secret-Key-Must-Be-At-Least-256-Bits-Long-2026
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

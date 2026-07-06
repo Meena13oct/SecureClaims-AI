@@ -1,0 +1,47 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: fraud-detection-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/secureclaims
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: fraud
+    show-sql: true
+  flyway:
+    enabled: true
+    schemas: fraud
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: SecureClaimsAI-JWT-Secret-Key-Must-Be-At-Least-256-Bits-Long-2026
+  fraud:
+    rules:
+      high-amount-threshold: 50000
+      medium-amount-threshold: 10000
+      high-amount-points: 3
+      medium-amount-points: 1
+      young-policy-months: 6
+      young-policy-points: 2
+      prior-claims-threshold: 3
+      prior-claims-points: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
