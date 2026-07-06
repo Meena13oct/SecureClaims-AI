@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/secureclaims}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin123}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: fraud
+    show-sql: false
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    schemas: fraud
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: test-secret-key-for-unit-tests-must-be-at-least-256-bits-long-2026
