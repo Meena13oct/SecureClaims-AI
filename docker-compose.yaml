@@ -1,0 +1,23 @@
+services:
+  secureclaims-db:
+    image: postgres:latest
+    container_name: secureclaims-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: secureclaims
+    ports:
+      - "5432:5432"
+    volumes:
+      - secureclaims-data:/var/lib/postgresql
+      - ./dbScripts/V0__create_database_and_schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d secureclaims"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  secureclaims-data:
+    driver: local

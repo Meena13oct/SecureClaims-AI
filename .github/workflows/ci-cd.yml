@@ -1,0 +1,220 @@
+# ==============================================================================
+# SecureClaims AI - CI/CD Pipeline
+# GitHub Actions workflow for building, testing, and deploying Spring Boot
+# microservices with PostgreSQL integration.
+# ==============================================================================
+
+name: SecureClaims AI CI/CD
+
+# ------------------------------------------------------------------------------
+# Trigger: Run on every push and pull request to any branch
+# CD (deploy) job only runs on main branch pushes
+# ------------------------------------------------------------------------------
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
+  pull_request:
+    branches:
+      - main
+
+# ------------------------------------------------------------------------------
+# Environment variables used across jobs
+# ------------------------------------------------------------------------------
+env:
+  JAVA_VERSION: '17'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ============================================================================
+  # BUILD & TEST JOB
+  # Compiles all modules, runs unit tests with PostgreSQL service container
+  # ============================================================================
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    # --------------------------------------------------------------------------
+    # PostgreSQL service container for integration tests
+    # Provides a real database for Flyway migrations and Spring Boot tests
+    # --------------------------------------------------------------------------
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: secureclaims
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin123
+        ports:
+          - 5432:5432
+        # Health check ensures PostgreSQL is ready before tests run
+        options: >-
+          --health-cmd="pg_isready -U admin -d secureclaims"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    # --------------------------------------------------------------------------
+    # Environment variables for Spring Boot test profile
+    # These override application-test.yml settings during CI
+    # --------------------------------------------------------------------------
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/secureclaims
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_FLYWAY_ENABLED: true
+
+    steps:
+      # Checkout source code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up JDK 17 for Maven build
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      # Cache Maven dependencies to speed up subsequent builds
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # --------------------------------------------------------------------------
+      # Create database schemas required by microservices
+      # Runs the initialization script against the PostgreSQL service container
+      # --------------------------------------------------------------------------
+      - name: Initialize database schemas
+        run: |
+          PGPASSWORD=admin123 psql -h localhost -U admin -d secureclaims -f dbScripts/V0__create_database_and_schemas.sql
+
+      # --------------------------------------------------------------------------
+      # Run unit tests across all modules
+      # Uses the test profile which connects to the PostgreSQL service container
+      # Flyway migrations execute automatically during test startup
+      # --------------------------------------------------------------------------
+      - name: Run unit tests
+        run: mvn test -B -Dspring.profiles.active=test
+
+      # --------------------------------------------------------------------------
+      # Build all modules using root pom.xml (compile + package)
+      # Uses mvn clean install to build entire multi-module project
+      # Skips tests here since they already ran in the previous step
+      # --------------------------------------------------------------------------
+      - name: Build all modules
+        run: mvn clean install -B -DskipTests
+
+      # --------------------------------------------------------------------------
+      # Upload build artifacts for use in the deploy job
+      # Retains artifacts for 7 days to allow debugging failed deployments
+      # --------------------------------------------------------------------------
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-jars
+          path: |
+            identity-service/target/*.jar
+            claims-service/target/*.jar
+            fraud-detection-service/target/*.jar
+            notification-service/target/*.jar
+          retention-days: 7
+
+  # ============================================================================
+  # DEPLOY JOB
+  # Builds Docker images for each microservice and pushes to GitHub Container
+  # Registry. Only runs on pushes to main branch after successful build.
+  # ============================================================================
+  deploy:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: build
+    # Only deploy from main branch
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # Checkout source code for Dockerfile access
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Download build artifacts from the build job
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: service-jars
+
+      # Set up JDK 17 (needed for Spring Boot layered jar extraction)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      # --------------------------------------------------------------------------
+      # Authenticate with GitHub Container Registry
+      # Uses the built-in GITHUB_TOKEN for secure access
+      # --------------------------------------------------------------------------
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --------------------------------------------------------------------------
+      # Build Docker images for each microservice
+      # Each image is tagged with service name and commit SHA for traceability
+      # --------------------------------------------------------------------------
+      - name: Build Docker image - Identity Service
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:latest \
+                       -f identity-service/Dockerfile ./identity-service
+
+      - name: Build Docker image - Claims Service
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:latest \
+                       -f claims-service/Dockerfile ./claims-service
+
+      - name: Build Docker image - Fraud Detection Service
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:latest \
+                       -f fraud-detection-service/Dockerfile ./fraud-detection-service
+
+      - name: Build Docker image - Notification Service
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:latest \
+                       -f notification-service/Dockerfile ./notification-service
+
+      # --------------------------------------------------------------------------
+      # Push Docker images to GitHub Container Registry
+      # Placeholder: uncomment when registry is configured
+      # --------------------------------------------------------------------------
+      - name: Push Docker images
+        run: |
+          # Uncomment the following lines when GitHub Container Registry is configured
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:${{ github.sha }}
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:latest
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:${{ github.sha }}
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:latest
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:${{ github.sha }}
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:latest
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:${{ github.sha }}
+          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:latest
+          echo "Docker images built and tagged successfully."
+          echo "Push to registry is currently a placeholder - uncomment when ready."

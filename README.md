@@ -7,6 +7,10 @@ Generate api deisgn based on .kiro/architecture/03-user-stories-output.md for ea
 Generate  maven project structure into D:\Meena_1\CapstoneProject\Project\SecureClaims-AI for SpringBoot Microservice project for the technology stack defined in 01-requirements-output.md
 Generate Coding Standards .kiro/steering/coding-standards.md for Spring Boot Microservice project and it should follow Best Practices and design pringciple
 Generate the database scripts for each of the service for creating the table and include it in resource folder as dbScripts
+Generate docker-compose.yml based on .kiro/prompts/03-docker-compose-postgres.md
+Use .kiro/prompts/05-generate-pipeline.md to create ci/cd pipeline
+//Configure Github Secrets -- refer to Settings.docx
+06-generate-docker-files.md
 
 
 
