@@ -11,6 +11,9 @@ Generate docker-compose.yml based on .kiro/prompts/03-docker-compose-postgres.md
 Use .kiro/prompts/05-generate-pipeline.md to create ci/cd pipeline
 //Configure Github Secrets -- refer to Settings.docx
 06-generate-docker-files.md
+Since you are now connected to my GitHub account via the official app, please target my `SecureClaims-AI` repository. Automatically commit and push all local changes—including the `.github/workflows/ci-cd.yml` file and the 4 new microservice `Dockerfiles`—directly to my remote `main` branch.
+Yes, I confirm. Please proceed with pushing directly to the main branch for this project setup.
+
 
 
 
