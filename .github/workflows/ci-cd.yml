@@ -53,14 +53,14 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: secureclaims
-          POSTGRES_USER: admin
-          POSTGRES_PASSWORD: admin123
+          POSTGRES_DB: ${{ vars.DB_NAME }}
+          POSTGRES_USER: ${{ secrets.DB_USERNAME }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
         ports:
           - 5432:5432
         # Health check ensures PostgreSQL is ready before tests run
         options: >-
-          --health-cmd="pg_isready -U admin -d secureclaims"
+          --health-cmd="pg_isready -U ${{ secrets.DB_USERNAME }} -d ${{ vars.DB_NAME }}"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -70,9 +70,9 @@ jobs:
     # These override application-test.yml settings during CI
     # --------------------------------------------------------------------------
     env:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/secureclaims
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${{ vars.DB_HOST }}:${{ vars.DB_PORT }}/${{ vars.DB_NAME }}
+      SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
+      SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
       SPRING_FLYWAY_ENABLED: true
 
     steps:
@@ -102,7 +102,7 @@ jobs:
       # --------------------------------------------------------------------------
       - name: Initialize database schemas
         run: |
-          PGPASSWORD=admin123 psql -h localhost -U admin -d secureclaims -f dbScripts/V0__create_database_and_schemas.sql
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ vars.DB_HOST }} -U ${{ secrets.DB_USERNAME }} -d ${{ vars.DB_NAME }} -f dbScripts/V0__create_database_and_schemas.sql
 
       # --------------------------------------------------------------------------
       # Run unit tests across all modules
