@@ -1,20 +1,20 @@
 server:
-  port: 8083
+  port: ${SERVER_PORT:8083}
 
 spring:
   application:
     name: fraud-detection-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/secureclaims
-    username: admin
-    password: admin123
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:secureclaims}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         default_schema: fraud
-    show-sql: true
+    show-sql: false
   flyway:
     enabled: true
     schemas: fraud
@@ -22,11 +22,11 @@ spring:
 
 app:
   jwt:
-    secret: SecureClaimsAI-JWT-Secret-Key-Must-Be-At-Least-256-Bits-Long-2026
+    secret: ${JWT_SECRET:default-dev-secret-change-in-production-must-be-256-bits}
   fraud:
     rules:
-      high-amount-threshold: 50000
-      medium-amount-threshold: 10000
+      high-amount-threshold: ${FRAUD_HIGH_AMOUNT:50000}
+      medium-amount-threshold: ${FRAUD_MEDIUM_AMOUNT:10000}
       high-amount-points: 3
       medium-amount-points: 1
       young-policy-months: 6

@@ -1,0 +1,12 @@
+{
+  "name": "default",
+  "description": "SecureClaims AI development agent with auto-push on completion",
+  "hooks": {
+    "stop": [
+      {
+        "command": "powershell -NoProfile -Command \"Set-Location 'D:\\Meena_1\\CapstoneProject\\Project\\SecureClaims-AI'; $changed = git status --porcelain; if ($changed) { git add -A; git commit -m 'chore: auto-push changes after agent response'; git push } else { Write-Output 'No changes to push' }\"",
+        "timeout_ms": 60000
+      }
+    ]
+  }
+}

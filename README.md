@@ -13,6 +13,7 @@ Use .kiro/prompts/05-generate-pipeline.md to create ci/cd pipeline
 06-generate-docker-files.md
 Since you are now connected to my GitHub account via the official app, please target my `SecureClaims-AI` repository. Automatically commit and push all local changes—including the `.github/workflows/ci-cd.yml` file and the 4 new microservice `Dockerfiles`—directly to my remote `main` branch.
 Yes, I confirm. Please proceed with pushing directly to the main branch for this project setup.
+Please stage, commit, and push my new .kiro/hooks/auto-push.md file to the main branch. Once this is pushed, confirm that my workspace auto-deploy hook is officially.
 
 
 

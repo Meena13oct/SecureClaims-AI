@@ -1,20 +1,32 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/secureclaims}
-    username: ${SPRING_DATASOURCE_USERNAME:admin}
-    password: ${SPRING_DATASOURCE_PASSWORD:admin123}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: org.h2.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     properties:
       hibernate:
-        default_schema: fraud
+        default_schema: public
     show-sql: false
   flyway:
-    enabled: ${SPRING_FLYWAY_ENABLED:true}
-    schemas: fraud
-    locations: classpath:db/migration
+    enabled: false
+  h2:
+    console:
+      enabled: false
 
 app:
   jwt:
     secret: test-secret-key-for-unit-tests-must-be-at-least-256-bits-long-2026
+  fraud:
+    rules:
+      high-amount-threshold: 50000
+      medium-amount-threshold: 10000
+      high-amount-points: 3
+      medium-amount-points: 1
+      young-policy-months: 6
+      young-policy-points: 2
+      prior-claims-threshold: 3
+      prior-claims-points: 3
