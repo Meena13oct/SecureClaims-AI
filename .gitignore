@@ -22,3 +22,5 @@ Thumbs.db
 
 # Upload directory
 uploads/
+
+.env.properties

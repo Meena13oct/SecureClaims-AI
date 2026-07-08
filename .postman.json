@@ -1,0 +1,83 @@
+{
+  "version": "0.1",
+  "project": {
+    "name": "SecureClaims-AI",
+    "baseUrl": "http://localhost",
+    "description": "Insurance Claims Processing System"
+  },
+  "default": {
+    "workspace": "secureclaims",
+    "collection": "identityservice"
+  },
+  "workspaces": {
+    "secureclaims": {
+      "id": "dc27a81b-2f24-4c80-8f35-b7278650d0e1",
+      "name": "secureclaims",
+      "type": "team"
+    }
+  },
+  "collections": {
+    "identityservice": {
+      "id": "2380403b-f072-48fd-b7b1-f0a9aa6194d1",
+      "uid": "201009-2380403b-f072-48fd-b7b1-f0a9aa6194d1",
+      "name": "identityservice",
+      "workspace": "secureclaims",
+      "baseUrl": "http://localhost:8081",
+      "requests": {
+        "US-003-register-success": {
+          "id": "e94574b3-3faa-32e4-26df-e89e7d56eec6",
+          "name": "US-003: Register New User (Success - 201)"
+        },
+        "US-003-register-validation": {
+          "id": "cb09860b-d854-b03c-e9e7-4434ec357217",
+          "name": "US-003: Register with Missing Fields (Validation - 400)"
+        },
+        "US-003-register-duplicate": {
+          "id": "abad5686-97e9-e3c3-f571-9ebe02af4ca7",
+          "name": "US-003: Register with Duplicate Email (Conflict - 409)"
+        },
+        "US-004-login-success": {
+          "id": "609f806f-7a1f-b06a-17e4-449e520d0881",
+          "name": "US-004: Login Success (200)"
+        },
+        "US-004-login-wrong-password": {
+          "id": "9bf482ab-a74f-0b0c-4d6d-e70c7e0bde01",
+          "name": "US-004: Wrong Password (401)"
+        },
+        "US-004-login-nonexistent-email": {
+          "id": "7c88d911-2141-e85b-35bd-8933bff51d9b",
+          "name": "US-004: Non-existent Email (401)"
+        },
+        "US-004-login-validation-failure": {
+          "id": "95ac3b58-e1be-b881-7ad3-8c154471f8c6",
+          "name": "US-004: Validation Failure - Blank Fields (400)"
+        }
+      }
+    },
+    "claimsservice": {
+      "id": "a36140a4-e458-4614-bc47-4e300f8d8583",
+      "uid": "201009-a36140a4-e458-4614-bc47-4e300f8d8583",
+      "name": "claimsservice",
+      "workspace": "secureclaims",
+      "baseUrl": "http://localhost:8082",
+      "requests": {}
+    },
+    "frauddetectionservice": {
+      "id": "66eb29e6-fbaf-4998-be4c-6cbf4878a59e",
+      "uid": "201009-66eb29e6-fbaf-4998-be4c-6cbf4878a59e",
+      "name": "frauddetectionservice",
+      "workspace": "secureclaims",
+      "baseUrl": "http://localhost:8083",
+      "requests": {}
+    },
+    "notificationservice": {
+      "id": "e57d6550-5712-4aa2-8757-5f73521ac332",
+      "uid": "201009-e57d6550-5712-4aa2-8757-5f73521ac332",
+      "name": "notificationservice",
+      "workspace": "secureclaims",
+      "baseUrl": "http://localhost:8084",
+      "requests": {}
+    }
+  },
+  "environments": {}
+}

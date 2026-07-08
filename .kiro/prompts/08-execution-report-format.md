@@ -49,7 +49,7 @@ Provide ready-to-use test data:
 * Sample request JSON
 * Expected response JSON
 
-Format it so it can be directly used in Postman.
+Format it in json format and apply beautification, so that it can be directly used in Postman and use api-design-output for the test data to be generated. There should be relationship between the test data. 
 
 ## 7. Test Coverage
 

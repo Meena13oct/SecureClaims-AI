@@ -221,14 +221,11 @@ jobs:
       # --------------------------------------------------------------------------
       - name: Push Docker images
         run: |
-          # Uncomment the following lines when GitHub Container Registry is configured
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:${{ github.sha }}
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:latest
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:${{ github.sha }}
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:latest
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:${{ github.sha }}
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:latest
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:${{ github.sha }}
-          # docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:latest
-          echo "Docker images built and tagged successfully."
-          echo "Push to registry is currently a placeholder - uncomment when ready."
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/identity-service:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/claims-service:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fraud-detection-service:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/notification-service:latest

@@ -1,0 +1,13 @@
+{
+  "name": "service-ops",
+  "description": "Agent for starting, stopping, and verifying SecureClaims microservices",
+  "allowedTools": ["shell", "read", "web_fetch"],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "docker compose ps",
+        "timeout_ms": 15000
+      }
+    ]
+  }
+}

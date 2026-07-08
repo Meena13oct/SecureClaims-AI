@@ -156,12 +156,7 @@ sent_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 
 Since US-001 has no REST API endpoints, the only testable endpoint is the Actuator health check.
 
-### Health Check — Identity Service
-
-* **URL:** `GET http://localhost:8081/actuator/health`
-* **Headers:** None required
-* **Request Body:** None
-
+### Health Chletsi
 **Expected Response (200 OK):**
 ```json
 {

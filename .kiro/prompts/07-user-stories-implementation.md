@@ -61,3 +61,30 @@ You are implementing the system based on .kiro/architecture/03-user-stories-outp
    - Logging included
    - Validation annotations used
    - Clean architecture followed
+
+# 7. After implementing the a user story generate a report as specified in .kiro/prompts/08-execution-report-format.md
+
+# 8. After the report is generated in step 7, automatically create Postman test cases:
+   - Read the "Postman Testing Guide" section from the generated report
+   - Read `.postman.json` to get workspace ID, collection IDs, and base URLs
+   - Service-to-collection mapping (all pre-created in `.postman.json`):
+     - identity-service → `identityservice` collection (port 8081)
+     - claims-service → `claimsservice` collection (port 8082)
+     - fraud-detection-service → `frauddetectionservice` collection (port 8083)
+     - notification-service → `notificationservice` collection (port 8084)
+   - Use the `id` field (NOT `uid`) from `.postman.json` when calling `createCollectionRequest`
+   - For each test case in the Postman Testing Guide section:
+     - Create a request in the matching service collection using `createCollectionRequest`
+     - Include method, URL, headers, request body (rawModeData), and test scripts (pm.test assertions)
+     - Test scripts must validate: status code, response structure, and business logic
+   - After all requests are created, attempt to run the collection using `runCollection`
+   - Update `.postman.json` with any new request IDs under the appropriate collection's `requests` object
+   - The test cases must be visible, in json format and runnable from the Postman app. 
+   - For example, they should be displaye in the below format:
+    {
+    "firstName": "Jane",
+    "lastName": "Boe",
+    "email": "jane.boe@example.com",
+    "username": "janeboe",
+    "password": "SecureP@ss2"
+    }  
