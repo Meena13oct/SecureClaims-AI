@@ -1,29 +1,49 @@
 # Execution Report: US-003 – User Registration
 
+**Epic:** Epic 2 – Identity Service  
+**Sprint:** Sprint 1 | **Day:** 2  
+**Status:** ✅ Complete  
+**Date:** 2026-07-09
+
+---
+
 ## 1. User Story Summary
 
-* **User Story ID:** US-003
-* **Title:** User Registration
-* **Description:** As a guest, I want to register an account with my name, email, username, and password, so that I can log in and submit insurance claims.
+| Field | Value |
+|-------|-------|
+| Story ID | US-003 |
+| Title | User Registration |
+| Actor | Guest (unauthenticated user) |
+| Goal | Register an account with name, email, username, and password to access the system |
+
+**Description:** A guest can create an account by providing their personal details. The system validates input, checks for duplicates, hashes the password with BCrypt, assigns the USER role, and returns the created user details without exposing the password.
 
 ---
 
 ## 2. Functional Overview
 
-* **What the feature does:** Provides a public REST endpoint for new user registration. Accepts user details, validates input, checks for duplicates, hashes the password with BCrypt, assigns the USER role, and persists the user to the database.
-* **Key business logic implemented:**
-  - Input validation with Bean Validation annotations (@NotBlank, @Email, @Size)
-  - Duplicate email and username detection (returns 409 Conflict)
-  - Password hashing via BCrypt (never stored as plain text)
-  - Automatic USER role assignment on registration
-  - Standard API response envelope with timestamp, status, message, and data
-* **Edge cases handled:**
-  - Missing or blank fields → 400 with per-field error messages
-  - Invalid email format → 400
-  - Password less than 8 characters → 400
-  - Email already registered → 409
-  - Username already taken → 409
-  - USER role not seeded in DB → 404 (graceful error)
+### What the feature does
+- Accepts user registration requests via a public REST endpoint
+- Validates all input fields using Bean Validation annotations
+- Checks for duplicate email and username in the database
+- Hashes the password using BCrypt before storage
+- Assigns the default USER role to the new account
+- Returns user details (excluding password) with a 201 Created status
+
+### Key business logic implemented
+- BCrypt password hashing (never stores plain text)
+- Duplicate email detection → 409 Conflict
+- Duplicate username detection → 409 Conflict
+- Automatic USER role assignment from roles table
+- Field-level validation with descriptive error messages
+
+### Edge cases handled
+- Missing required fields → 400 Bad Request with field-level errors
+- Invalid email format → 400 Bad Request
+- Password too short (< 8 chars) → 400 Bad Request
+- Email already registered → 409 Conflict
+- Username already taken → 409 Conflict
+- USER role not found in database → 404 Not Found (system integrity issue)
 
 ---
 
@@ -33,7 +53,8 @@
 
 **Role:** Public (no JWT required)
 
-**Request Body:**
+#### Request Body
+
 ```json
 {
   "firstName": "Jane",
@@ -44,10 +65,21 @@
 }
 ```
 
-**Response — 201 Created:**
+#### Validation Rules
+
+| Field | Constraint | Error Message |
+|-------|-----------|---------------|
+| firstName | `@NotBlank` | "First name is required" |
+| lastName | `@NotBlank` | "Last name is required" |
+| email | `@NotBlank`, `@Email` | "Email is required" / "Must be a valid email address" |
+| username | `@NotBlank` | "Username is required" |
+| password | `@NotBlank`, `@Size(min=8)` | "Password is required" / "Password must be at least 8 characters" |
+
+#### Response: 201 Created
+
 ```json
 {
-  "timestamp": "2026-07-07T20:00:00",
+  "timestamp": "2026-07-09T10:00:00",
   "status": 201,
   "message": "User registered successfully",
   "data": {
@@ -61,10 +93,11 @@
 }
 ```
 
-**Response — 400 Bad Request (Validation Failure):**
+#### Response: 400 Bad Request (Validation Failure)
+
 ```json
 {
-  "timestamp": "2026-07-07T20:00:00",
+  "timestamp": "2026-07-09T10:00:00",
   "status": 400,
   "error": "Bad Request",
   "message": "One or more fields failed validation",
@@ -76,10 +109,11 @@
 }
 ```
 
-**Response — 409 Conflict (Duplicate):**
+#### Response: 409 Conflict (Duplicate)
+
 ```json
 {
-  "timestamp": "2026-07-07T20:00:00",
+  "timestamp": "2026-07-09T10:00:00",
   "status": 409,
   "error": "Conflict",
   "message": "Email already in use",
@@ -87,256 +121,274 @@
 }
 ```
 
-**HTTP Status Codes:**
-
-| Code | Condition |
-|------|-----------|
-| 201 | User registered successfully |
-| 400 | Validation failure (missing/invalid fields) |
-| 409 | Email or username already exists |
-| 500 | Unexpected server error |
-
 ---
 
 ## 4. Database Changes
 
-### Tables Used (already created by Flyway V1 migration)
+### Schema: `identity`
 
-| Schema | Table | Purpose |
-|--------|-------|---------|
-| `identity` | `users` | Stores registered user accounts |
-| `identity` | `roles` | Stores available roles (USER, ADMIN) |
-| `identity` | `user_roles` | Maps users to their assigned roles (many-to-many) |
+### Tables Created
+
+#### `identity.users`
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() |
+| username | VARCHAR(50) | NOT NULL, UNIQUE |
+| email | VARCHAR(100) | NOT NULL, UNIQUE |
+| first_name | VARCHAR(50) | NOT NULL |
+| last_name | VARCHAR(50) | NOT NULL |
+| password_hash | VARCHAR(255) | NOT NULL |
+| is_active | BOOLEAN | NOT NULL, DEFAULT TRUE |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
+
+**Indexes:**
+- `idx_users_email` on `email`
+- `idx_users_username` on `username`
+
+#### `identity.roles`
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() |
+| name | VARCHAR(20) | NOT NULL, UNIQUE |
+
+#### `identity.user_roles` (Join Table)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| user_id | UUID | NOT NULL, FK → users(id) ON DELETE CASCADE |
+| role_id | UUID | NOT NULL, FK → roles(id) ON DELETE CASCADE |
+
+**Primary Key:** (user_id, role_id)  
+**Index:** `idx_user_roles_user_id` on `user_id`
 
 ### Relationships
-
-- `identity.user_roles.user_id` → `identity.users.id` (CASCADE DELETE)
-- `identity.user_roles.role_id` → `identity.roles.id` (CASCADE DELETE)
-
-### Entity Mapping
-
-**User Entity → `identity.users`**
-
-| Field | Column | Type |
-|-------|--------|------|
-| id | id | UUID (auto-generated) |
-| username | username | VARCHAR(50) UNIQUE |
-| email | email | VARCHAR(100) UNIQUE |
-| firstName | first_name | VARCHAR(50) |
-| lastName | last_name | VARCHAR(50) |
-| passwordHash | password_hash | VARCHAR(255) |
-| isActive | is_active | BOOLEAN (default TRUE) |
-| createdAt | created_at | TIMESTAMP |
-| updatedAt | updated_at | TIMESTAMP |
-
-**Role Entity → `identity.roles`**
-
-| Field | Column | Type |
-|-------|--------|------|
-| id | id | UUID (auto-generated) |
-| name | name | VARCHAR(20) UNIQUE |
+- `users` ↔ `roles`: Many-to-Many through `user_roles`
 
 ---
 
 ## 5. Data Inserted
 
-* **Seed data inserted:** Yes — via Flyway migration `V1__create_identity_tables.sql`
+**Yes** – Seed data inserted via Flyway migration `V1__create_identity_tables.sql`
 
-| Table | Insert Statement |
-|-------|-----------------|
-| `identity.roles` | `INSERT INTO roles (id, name) VALUES (gen_random_uuid(), 'USER'), (gen_random_uuid(), 'ADMIN') ON CONFLICT (name) DO NOTHING;` |
+### Table: `identity.roles`
 
-**Expected Records:**
+```sql
+INSERT INTO roles (id, name) VALUES
+    (gen_random_uuid(), 'USER'),
+    (gen_random_uuid(), 'ADMIN')
+ON CONFLICT (name) DO NOTHING;
+```
 
 | id | name |
 |----|------|
-| `<auto-generated UUID>` | USER |
-| `<auto-generated UUID>` | ADMIN |
-
-> The USER role must exist before registration works. It is seeded automatically on first startup via Flyway.
+| (auto-generated UUID) | USER |
+| (auto-generated UUID) | ADMIN |
 
 ---
 
 ## 6. Postman Testing Guide
 
-### Register a New User (Success)
+### Test Case 1: Register New User (Success - 201)
 
-* **Method:** POST
-* **URL:** `http://localhost:8081/api/identity/v1/auth/register`
-* **Headers:**
-  ```
-  Content-Type: application/json
-  ```
-* **Request Body:**
-  ```json
+**Method:** POST  
+**URL:** `http://13.207.68.121:8081/api/identity/v1/auth/register`
 
-  ```
-* **Expected Response (201 Created):**
-  ```json
-  {
-    "timestamp": "2026-07-07T20:00:00.000",
-    "status": 201,
-    "message": "User registered successfully",
-    "data": {
-      "userId": "<auto-generated-uuid>",
-      "username": "janedoe",
-      "email": "jane.doe@example.com",
-      "firstName": "Jane",
-      "lastName": "Doe",
-      "roles": ["USER"]
-    }
-  }
-  ```
+**Headers:**
+```
+Content-Type: application/json
+```
 
-### Register with Missing Fields (Validation Error)
+**Request Body:**
+```json
+{
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "email": "jane.doe@example.com",
+  "username": "janedoe",
+  "password": "SecureP@ss1"
+}
+```
 
-* **Method:** POST
-* **URL:** `http://localhost:8081/api/identity/v1/auth/register`
-* **Headers:**
-  ```
-  Content-Type: application/json
-  ```json
-  
-  {
+**Expected Response (201 Created):**
+```json
+{
+  "timestamp": "2026-07-09T10:00:00",
+  "status": 201,
+  "message": "User registered successfully",
+  "data": {
+    "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "username": "janedoe",
+    "email": "jane.doe@example.com",
     "firstName": "Jane",
     "lastName": "Doe",
-    "email": "jane.doe@example.com",
-    "username": "janedoe",
-    "password": "SecureP@ss1"
+    "roles": ["USER"]
   }
-* **Request Body:**
-  ```json
-  {
-    "firstName": "",
-    "lastName": "Doe",
-    "email": "invalid-email",
-    "username": "",
-    "password": "short"
-  }
-  ```
-* **Expected Response (400 Bad Request):**
-  ```json
-  {
-    "timestamp": "2026-07-07T20:00:00.000",
-    "status": 400,
-    "error": "Bad Request",
-    "message": "One or more fields failed validation",
-    "path": "/api/identity/v1/auth/register",
-    "fieldErrors": [
-      { "field": "firstName", "message": "First name is required" },
-      { "field": "email", "message": "Must be a valid email address" },
-      { "field": "username", "message": "Username is required" },
-      { "field": "password", "message": "Password must be at least 8 characters" }
-    ]
-  }
-  ```
+}
+```
 
-### Register with Duplicate Email (Conflict)
+**Test Script:**
+```javascript
+pm.test("Status code is 201", function () {
+    pm.response.to.have.status(201);
+});
+pm.test("Response has user data", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.data.userId).to.not.be.undefined;
+    pm.expect(jsonData.data.username).to.eql("janedoe");
+    pm.expect(jsonData.data.email).to.eql("jane.doe@example.com");
+    pm.expect(jsonData.data.roles).to.include("USER");
+});
+pm.test("Password not in response", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.data.password).to.be.undefined;
+    pm.expect(jsonData.data.passwordHash).to.be.undefined;
+});
+```
 
-* **Method:** POST
-* **URL:** `http://localhost:8081/api/identity/v1/auth/register`
-* **Headers:**
-  ```
-  Content-Type: application/json
-  ```
-* **Request Body:**
-  ```json
-  {
-    "firstName": "John",
-    "lastName": "Smith",
-    "email": "jane.doe@example.com",
-    "username": "johnsmith",
-    "password": "AnotherP@ss1"
-  }
-  ```
-* **Expected Response (409 Conflict):**
-  ```json
-  {
-    "timestamp": "2026-07-07T20:00:00.000",
-    "status": 409,
-    "error": "Conflict",
-    "message": "Email already in use",
-    "path": "/api/identity/v1/auth/register"
-  }
-  ```
+---
+
+### Test Case 2: Register with Missing Fields (Validation - 400)
+
+**Method:** POST  
+**URL:** `http://13.207.68.121:8081/api/identity/v1/auth/register`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "firstName": "",
+  "lastName": "",
+  "email": "invalid-email",
+  "username": "",
+  "password": "short"
+}
+```
+
+**Expected Response (400 Bad Request):**
+```json
+{
+  "timestamp": "2026-07-09T10:00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "One or more fields failed validation",
+  "path": "/api/identity/v1/auth/register",
+  "fieldErrors": [
+    { "field": "firstName", "message": "First name is required" },
+    { "field": "lastName", "message": "Last name is required" },
+    { "field": "email", "message": "Must be a valid email address" },
+    { "field": "username", "message": "Username is required" },
+    { "field": "password", "message": "Password must be at least 8 characters" }
+  ]
+}
+```
+
+**Test Script:**
+```javascript
+pm.test("Status code is 400", function () {
+    pm.response.to.have.status(400);
+});
+pm.test("Response has field errors", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.fieldErrors).to.be.an("array");
+    pm.expect(jsonData.fieldErrors.length).to.be.greaterThan(0);
+});
+pm.test("Error message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.message).to.eql("One or more fields failed validation");
+});
+```
+
+---
+
+### Test Case 3: Register with Duplicate Email (Conflict - 409)
+
+**Method:** POST  
+**URL:** `http://13.207.68.121:8081/api/identity/v1/auth/register`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body (use same email as Test Case 1):**
+```json
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "email": "jane.doe@example.com",
+  "username": "johnsmith",
+  "password": "AnotherP@ss1"
+}
+```
+
+**Expected Response (409 Conflict):**
+```json
+{
+  "timestamp": "2026-07-09T10:00:00",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Email already in use",
+  "path": "/api/identity/v1/auth/register"
+}
+```
+
+**Test Script:**
+```javascript
+pm.test("Status code is 409", function () {
+    pm.response.to.have.status(409);
+});
+pm.test("Conflict message is correct", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.message).to.eql("Email already in use");
+});
+pm.test("Error type is Conflict", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.error).to.eql("Conflict");
+});
+```
 
 ---
 
 ## 7. Test Coverage
 
-### Unit Tests Created
+### Unit Tests Created: 11 tests in `AuthServiceImplTest`
 
-| Test Class | Test Method | Scenario | Result |
-|-----------|------------|----------|--------|
-| `AuthServiceImplTest` | `should_registerUser_when_validRequest` | Successful registration with all fields valid | ✅ PASS |
-| `AuthServiceImplTest` | `should_hashPassword_when_registeringUser` | Password is BCrypt hashed before persistence | ✅ PASS |
-| `AuthServiceImplTest` | `should_throwDuplicateResourceException_when_emailAlreadyExists` | Duplicate email returns error, user not saved | ✅ PASS |
-| `AuthServiceImplTest` | `should_throwDuplicateResourceException_when_usernameAlreadyExists` | Duplicate username returns error, user not saved | ✅ PASS |
-| `AuthServiceImplTest` | `should_throwResourceNotFoundException_when_userRoleNotFound` | Missing USER role throws graceful error | ✅ PASS |
-| `AuthServiceImplTest` | `should_assignUserRole_when_registering` | USER role correctly assigned to new user | ✅ PASS |
+| # | Test Method | Scenario |
+|---|-------------|----------|
+| 1 | `should_registerUser_when_validRequest` | Successful registration returns correct UserResponse |
+| 2 | `should_hashPassword_when_registeringUser` | Password is BCrypt hashed before saving |
+| 3 | `should_throwDuplicateResourceException_when_emailAlreadyExists` | Duplicate email → DuplicateResourceException |
+| 4 | `should_throwDuplicateResourceException_when_usernameAlreadyExists` | Duplicate username → DuplicateResourceException |
+| 5 | `should_throwResourceNotFoundException_when_userRoleNotFound` | Missing USER role → ResourceNotFoundException |
+| 6 | `should_assignUserRole_when_registering` | USER role is assigned to new user |
+| 7 | `should_returnToken_when_validCredentials` | Valid login returns JWT token |
+| 8 | `should_generateTokenWithRoles_when_loginSuccessful` | JWT includes ROLE_USER prefix |
+| 9 | `should_throwInvalidCredentialsException_when_emailNotFound` | Unknown email → InvalidCredentialsException |
+| 10 | `should_throwInvalidCredentialsException_when_passwordDoesNotMatch` | Wrong password → InvalidCredentialsException |
+| 11 | `should_useBcryptMatches_when_verifyingPassword` | BCrypt matches() is used for verification |
 
-### Integration Test
-
-| Test Class | Test Method | Scenario | Result |
-|-----------|------------|----------|--------|
-| `IdentityServiceApplicationTests` | `should_loadContext_when_applicationStarts` | Spring context loads with all beans wired | ✅ PASS |
-
-### Build Result
-
-```
-[INFO] BUILD SUCCESS
-[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
-[INFO] Total time: 13.240 s
-```
+**Result:** All 11 tests pass ✅
 
 ---
 
 ## 8. Notes / Assumptions
 
-### Assumptions
+- **Flyway** is used for database migrations (`V1__create_identity_tables.sql`)
+- The USER and ADMIN roles are seeded automatically on first migration run
+- `ddl-auto=update` is also enabled, so Hibernate will create/update tables in addition to Flyway
+- Password minimum length is 8 characters (no complexity requirements beyond that in this story)
+- The `@JsonIgnore` annotation on the `passwordHash` field in the User entity ensures it's never serialized
+- The endpoint is public — no JWT token is required for registration
+- The response includes the auto-generated UUID as `userId`
+- Roles are stored as plain names (`USER`, `ADMIN`) in the database, prefixed with `ROLE_` only in JWT claims
 
-1. The `USER` role is pre-seeded in the `identity.roles` table via Flyway migration — registration will fail with 404 if the role is missing.
-2. Password minimum length is 8 characters as per API design spec.
-3. The `JwtTokenProvider` class is created in this story (required for compilation) but will be fully utilized in US-004 (Login).
-4. `SecurityConfig` permits all `/api/identity/v1/auth/**` endpoints publicly — JWT filter will be added in US-005.
-5. The response does not include a JWT token on registration — user must login separately (US-004).
+---
 
-### Architecture Decisions
-
-- Constructor injection via `@RequiredArgsConstructor` (no `@Autowired` field injection)
-- Entities never exposed in API responses — mapped to `UserResponse` DTO
-- `@JsonIgnore` on `passwordHash` field as defense-in-depth
-- `@Transactional` on the register method to ensure atomicity
-- Standard `ApiResponse<T>` envelope wrapper for all responses
-- `GlobalExceptionHandler` with `@RestControllerAdvice` for centralized error handling
-
-### Files Created
-
-| Package | File | Purpose |
-|---------|------|---------|
-| `entity` | `User.java` | JPA entity for users table |
-| `entity` | `Role.java` | JPA entity for roles table |
-| `repository` | `UserRepository.java` | Spring Data JPA repository for User |
-| `repository` | `RoleRepository.java` | Spring Data JPA repository for Role |
-| `dto/request` | `RegisterRequest.java` | Inbound DTO with validation |
-| `dto/response` | `UserResponse.java` | Outbound DTO for user details |
-| `dto/response` | `ApiResponse.java` | Standard response envelope |
-| `service` | `AuthService.java` | Service interface |
-| `service/impl` | `AuthServiceImpl.java` | Service implementation |
-| `controller` | `AuthController.java` | REST controller |
-| `config` | `SecurityConfig.java` | Spring Security configuration |
-| `security` | `JwtTokenProvider.java` | JWT utility (prep for US-004/005) |
-| `exception` | `DuplicateResourceException.java` | Custom 409 exception |
-| `exception` | `ResourceNotFoundException.java` | Custom 404 exception |
-| `exception` | `GlobalExceptionHandler.java` | Centralized error handler |
-
-### Acceptance Criteria Verification
-
-| # | Criteria | Status |
-|---|----------|--------|
-| 1 | `POST /auth/register` accepts firstName, lastName, email, username, password | ✅ Met |
-| 2 | Returns 400 with field-level errors if any field is blank or email invalid | ✅ Met |
-| 3 | Returns 409 if email or username already exists | ✅ Met |
-| 4 | Password stored as BCrypt hash — never plain text | ✅ Met |
-| 5 | User saved to `identity.users` with USER role in `identity.user_roles` | ✅ Met |
-| 6 | Returns 201 Created with user details (no password in response) | ✅ Met |
+*Report generated: 2026-07-09 | US-003 Implementation Complete*
