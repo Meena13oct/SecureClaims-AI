@@ -1,0 +1,432 @@
+{
+  "info": {
+    "name": "US-005 & US-006: JWT Filter & RBAC Tests",
+    "_postman_id": "us-005-006-jwt-rbac-tests",
+    "description": "Test cases for US-005 (JWT Authentication Filter) and US-006 (Role-Based Access Control & /auth/me endpoint)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://13.207.68.121:8081"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "US-005-Setup: Register Test User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 or 409 (already exists)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"username\": \"janedoe\",\n  \"password\": \"SecureP@ss1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "US-005-Setup: Login to Get Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.token).to.not.be.undefined;",
+                  "    pm.expect(jsonData.data.token).to.be.a('string');",
+                  "    pm.expect(jsonData.data.token.length).to.be.greaterThan(50);",
+                  "});",
+                  "",
+                  "// Store token for subsequent tests",
+                  "var token = pm.response.json().data.token;",
+                  "pm.collectionVariables.set('token', token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"SecureP@ss1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "US-005: JWT Filter Tests",
+      "item": [
+        {
+          "name": "US-005-TC01: Access /auth/me Without Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response is JSON with error details', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('status', 401);",
+                  "    pm.expect(jsonData).to.have.property('error', 'Unauthorized');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('path');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "US-005-TC02: Access /auth/me With Invalid Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Error message indicates invalid token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('Invalid or expired JWT token');",
+                  "});",
+                  "",
+                  "pm.test('Path is included in response', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.path).to.eql('/api/identity/v1/auth/me');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer invalid.token.string" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "US-005-TC03: Access /auth/me With Expired Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Expired token is rejected', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(401);",
+                  "    pm.expect(jsonData.message).to.include('Invalid or expired JWT token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTEyMzQtMTIzNC0xMjM0NTY3ODkwYWIiLCJ1c2VybmFtZSI6InRlc3QiLCJyb2xlcyI6WyJST0xFX1VTRVIiXSwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE2MDAwMDAwMDF9.invalid_signature" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "US-005-TC04: Access Public Endpoint Without Token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Health endpoint returns UP', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('UP');",
+                  "});",
+                  "",
+                  "pm.test('No authentication required for health', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "US-005-TC05: Access /auth/me With Valid Token (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('JWT filter passes valid token through', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(200);",
+                  "    pm.expect(jsonData.data).to.not.be.undefined;",
+                  "});",
+                  "",
+                  "pm.test('Authenticated user data is returned', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.userId).to.not.be.undefined;",
+                  "    pm.expect(data.username).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "US-006: RBAC & /auth/me Tests",
+      "item": [
+        {
+          "name": "US-006-TC01: Get Current User Profile (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct envelope structure', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('timestamp');",
+                  "    pm.expect(jsonData).to.have.property('status', 200);",
+                  "    pm.expect(jsonData).to.have.property('message', 'Request processed successfully');",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test('Profile contains all required fields', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data).to.have.property('userId');",
+                  "    pm.expect(data).to.have.property('username');",
+                  "    pm.expect(data).to.have.property('email');",
+                  "    pm.expect(data).to.have.property('firstName');",
+                  "    pm.expect(data).to.have.property('lastName');",
+                  "    pm.expect(data).to.have.property('roles');",
+                  "});",
+                  "",
+                  "pm.test('Profile data matches registered user', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.username).to.eql('janedoe');",
+                  "    pm.expect(data.email).to.eql('jane.doe@example.com');",
+                  "    pm.expect(data.firstName).to.eql('Jane');",
+                  "    pm.expect(data.lastName).to.eql('Doe');",
+                  "});",
+                  "",
+                  "pm.test('Roles are in ROLE_ format', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    pm.expect(data.roles).to.be.an('array');",
+                  "    pm.expect(data.roles).to.include('ROLE_USER');",
+                  "});",
+                  "",
+                  "pm.test('userId is a valid UUID', function () {",
+                  "    var data = pm.response.json().data;",
+                  "    var uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "    pm.expect(data.userId).to.match(uuidRegex);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "US-006-TC02: Access Admin Endpoint with USER Token (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test('USER cannot access admin endpoints', function () {",
+                  "    // 403 confirms RBAC is enforced",
+                  "    pm.expect(pm.response.code).to.eql(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "US-006-TC03: Access Admin Endpoint Without Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Unauthenticated users cannot access admin routes', function () {",
+                  "    pm.expect(pm.response.code).to.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "US-006-TC04: Public Endpoints Still Work (Register)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Register endpoint is public (no token needed)', function () {",
+                  "    // 400 or 409 means the endpoint is reachable without auth",
+                  "    // (not 401/403)",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 400, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Public\",\n  \"lastName\": \"Test\",\n  \"email\": \"public.test@example.com\",\n  \"username\": \"publictest\",\n  \"password\": \"SecureP@ss1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/identity/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "identity", "v1", "auth", "register"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

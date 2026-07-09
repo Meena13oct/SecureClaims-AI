@@ -106,8 +106,10 @@ public class AuthServiceImpl implements AuthService {
                 .map(role -> "ROLE_" + role.getName())
                 .collect(Collectors.toList());
 
-        // Generate JWT token
-        final String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), roles);
+        // Generate JWT token with full user profile for /auth/me resolution
+        final String token = jwtTokenProvider.generateToken(
+                user.getId(), user.getUsername(), user.getEmail(),
+                user.getFirstName(), user.getLastName(), roles);
         log.info("User logged in: userId={}, username={}", user.getId(), user.getUsername());
 
         return LoginResponse.builder()

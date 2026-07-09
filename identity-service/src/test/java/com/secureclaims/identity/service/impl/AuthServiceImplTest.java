@@ -210,7 +210,7 @@ class AuthServiceImplTest {
         // given
         when(userRepository.findByEmail("jane.doe@example.com")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("SecureP@ss1", "$2a$10$hashedPassword")).thenReturn(true);
-        when(jwtTokenProvider.generateToken(eq(existingUser.getId()), eq("janedoe"), anyList()))
+        when(jwtTokenProvider.generateToken(any(UUID.class), anyString(), anyString(), anyString(), anyString(), anyList()))
                 .thenReturn("mock.jwt.token");
 
         // when
@@ -226,16 +226,18 @@ class AuthServiceImplTest {
         // given
         when(userRepository.findByEmail("jane.doe@example.com")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("SecureP@ss1", "$2a$10$hashedPassword")).thenReturn(true);
-        when(jwtTokenProvider.generateToken(any(UUID.class), anyString(), anyList()))
+        when(jwtTokenProvider.generateToken(any(UUID.class), anyString(), anyString(), anyString(), anyString(), anyList()))
                 .thenReturn("mock.jwt.token");
 
         // when
         authService.login(loginRequest);
 
-        // then — verify JWT is generated with ROLE_ prefix
+        // then — verify JWT is generated with ROLE_ prefix and full user profile
         @SuppressWarnings("unchecked")
         final ArgumentCaptor<List<String>> rolesCaptor = ArgumentCaptor.forClass(List.class);
-        verify(jwtTokenProvider).generateToken(eq(existingUser.getId()), eq("janedoe"), rolesCaptor.capture());
+        verify(jwtTokenProvider).generateToken(
+                eq(existingUser.getId()), eq("janedoe"), eq("jane.doe@example.com"),
+                eq("Jane"), eq("Doe"), rolesCaptor.capture());
         assertThat(rolesCaptor.getValue()).containsExactly("ROLE_USER");
     }
 
@@ -264,7 +266,7 @@ class AuthServiceImplTest {
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid email or password");
 
-        verify(jwtTokenProvider, never()).generateToken(any(), anyString(), anyList());
+        verify(jwtTokenProvider, never()).generateToken(any(), anyString(), anyString(), anyString(), anyString(), anyList());
     }
 
     @Test
@@ -272,7 +274,7 @@ class AuthServiceImplTest {
         // given
         when(userRepository.findByEmail("jane.doe@example.com")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("SecureP@ss1", "$2a$10$hashedPassword")).thenReturn(true);
-        when(jwtTokenProvider.generateToken(any(UUID.class), anyString(), anyList()))
+        when(jwtTokenProvider.generateToken(any(UUID.class), anyString(), anyString(), anyString(), anyString(), anyList()))
                 .thenReturn("token");
 
         // when
