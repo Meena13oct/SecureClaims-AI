@@ -10,15 +10,13 @@ spring:
     password: ${DB_PASSWORD:admin123}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         default_schema: notifications
     show-sql: false
   flyway:
-    enabled: true
-    schemas: notifications
-    locations: classpath:db/migration
+    enabled: false
 
 app:
   jwt:
