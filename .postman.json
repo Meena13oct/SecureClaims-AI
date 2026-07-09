@@ -51,6 +51,42 @@
         "US-004-login-validation-failure": {
           "id": "95ac3b58-e1be-b881-7ad3-8c154471f8c6",
           "name": "US-004: Validation Failure - Blank Fields (400)"
+        },
+        "US-005-no-token": {
+          "id": "us005-no-token-401",
+          "name": "US-005: Access Secured Endpoint Without Token (Unauthorized - 401)"
+        },
+        "US-005-invalid-token": {
+          "id": "us005-invalid-token-401",
+          "name": "US-005: Access Secured Endpoint With Invalid Token (Unauthorized - 401)"
+        },
+        "US-005-expired-token": {
+          "id": "us005-expired-token-401",
+          "name": "US-005: Access Secured Endpoint With Expired Token (Unauthorized - 401)"
+        },
+        "US-005-public-endpoint": {
+          "id": "us005-public-endpoint-200",
+          "name": "US-005: Access Public Health Endpoint Without Token (Success - 200)"
+        },
+        "US-005-valid-token": {
+          "id": "us005-valid-token-200",
+          "name": "US-005: Access Secured Endpoint With Valid Token (Success - 200)"
+        },
+        "US-006-get-profile": {
+          "id": "us006-get-profile-200",
+          "name": "US-006: Get Current User Profile (Success - 200)"
+        },
+        "US-006-admin-user-token": {
+          "id": "us006-admin-user-token-403",
+          "name": "US-006: Access Admin Endpoint With USER Token (Forbidden - 403)"
+        },
+        "US-006-admin-no-token": {
+          "id": "us006-admin-no-token-401",
+          "name": "US-006: Access Admin Endpoint Without Token (Unauthorized - 401)"
+        },
+        "US-006-public-register": {
+          "id": "us006-public-register-201",
+          "name": "US-006: Public Register Endpoint Still Accessible (Success - 201/409)"
         }
       }
     },
