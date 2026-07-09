@@ -9,9 +9,11 @@ import com.secureclaims.events.RiskLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionPhase;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -43,8 +45,8 @@ public class FraudEventHandler {
      *
      * @param event the claim created event
      */
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleClaimCreated(final ClaimCreatedEvent event) {
         try {
             log.info("Fraud analysis started: claimId={}, userId={}", event.getClaimId(), event.getUserId());
@@ -105,7 +107,17 @@ public class FraudEventHandler {
             final FraudAnalysis saved = fraudAnalysisRepository.save(analysis);
             log.info("Fraud analysis completed: claimId={}, score={}, level={}", event.getClaimId(), totalScore, riskLevel);
 
-            // Publish FraudAnalysisCompletedEvent
+            // Directly update claim status based on fraud result (US-012)
+            final String newStatus = (riskLevel == RiskLevel.HIGH) ? "REJECTED" : "UNDER_REVIEW";
+            claimRepository.findById(event.getClaimId()).ifPresent(claim -> {
+                final com.secureclaims.events.ClaimStatus prevStatus = claim.getStatus();
+                claim.setStatus(com.secureclaims.events.ClaimStatus.valueOf(newStatus));
+                claim.setUpdatedBy("FRAUD_ENGINE");
+                claimRepository.save(claim);
+                log.info("Claim auto-updated: claimId={}, {} -> {}, by=FRAUD_ENGINE", event.getClaimId(), prevStatus, newStatus);
+            });
+
+            // Publish FraudAnalysisCompletedEvent for notifications
             eventPublisher.publishEvent(new FraudAnalysisCompletedEvent(
                     this, event.getClaimId(), event.getUserId(),
                     totalScore, riskLevel, notes.toString(), Instant.now()));

@@ -5,8 +5,9 @@ import com.secureclaims.events.FraudAnalysisCompletedEvent;
 import com.secureclaims.events.RiskLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionPhase;
 
 /**
  * Listens for FraudAnalysisCompletedEvent and automatically updates claim status.
@@ -30,7 +31,7 @@ public class ClaimStatusEventHandler {
      *
      * @param event the fraud analysis completed event
      */
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleFraudAnalysisCompleted(final FraudAnalysisCompletedEvent event) {
         try {
             final String newStatus;

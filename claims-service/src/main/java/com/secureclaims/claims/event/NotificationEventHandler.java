@@ -7,9 +7,12 @@ import com.secureclaims.events.ClaimStatusUpdatedEvent;
 import com.secureclaims.events.FraudAnalysisCompletedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.event.TransactionPhase;
 
 import java.util.UUID;
 
@@ -30,7 +33,8 @@ public class NotificationEventHandler {
     /**
      * Notify user when a claim is submitted (US-013).
      */
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Order(10)
     public void handleClaimCreated(final ClaimCreatedEvent event) {
         try {
@@ -52,7 +56,8 @@ public class NotificationEventHandler {
     /**
      * Notify user when fraud analysis is completed (US-013).
      */
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Order(10)
     public void handleFraudAnalysisCompleted(final FraudAnalysisCompletedEvent event) {
         try {
@@ -74,7 +79,8 @@ public class NotificationEventHandler {
     /**
      * Notify user when claim status changes (US-014).
      */
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Order(10)
     public void handleClaimStatusUpdated(final ClaimStatusUpdatedEvent event) {
         try {

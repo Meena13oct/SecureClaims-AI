@@ -16,9 +16,7 @@ spring:
         default_schema: claims
     show-sql: false
   flyway:
-    enabled: true
-    schemas: claims,fraud,notifications
-    locations: classpath:db/migration
+    enabled: false
   servlet:
     multipart:
       max-file-size: 10MB

@@ -46,7 +46,7 @@ import java.util.UUID;
 public class ClaimServiceImpl implements ClaimService {
 
     private static final Map<ClaimStatus, Set<ClaimStatus>> VALID_TRANSITIONS = Map.of(
-            ClaimStatus.SUBMITTED, Set.of(ClaimStatus.UNDER_REVIEW),
+            ClaimStatus.SUBMITTED, Set.of(ClaimStatus.UNDER_REVIEW, ClaimStatus.REJECTED),
             ClaimStatus.UNDER_REVIEW, Set.of(ClaimStatus.APPROVED, ClaimStatus.REJECTED),
             ClaimStatus.APPROVED, Set.of(ClaimStatus.CLOSED),
             ClaimStatus.REJECTED, Set.of(ClaimStatus.CLOSED)

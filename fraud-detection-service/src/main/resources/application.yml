@@ -10,7 +10,7 @@ spring:
     password: ${DB_PASSWORD:admin123}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         default_schema: fraud

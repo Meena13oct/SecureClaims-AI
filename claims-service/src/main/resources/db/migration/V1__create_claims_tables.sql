@@ -1,11 +1,8 @@
 -- ============================================================
 -- Claims Service Database Migration
 -- Schema: claims, fraud, notifications
+-- Note: Schemas must be pre-created by admin
 -- ============================================================
-
-CREATE SCHEMA IF NOT EXISTS claims;
-CREATE SCHEMA IF NOT EXISTS fraud;
-CREATE SCHEMA IF NOT EXISTS notifications;
 
 SET search_path TO claims;
 
