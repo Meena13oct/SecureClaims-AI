@@ -6,7 +6,7 @@ spring:
     name: notification-service
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:secureclaims}
-    username: ${DB_USERNAME:admin}
+    username: ${DB_USERNAME:scadmin}
     password: ${DB_PASSWORD:admin123}
   jpa:
     hibernate:

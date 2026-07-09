@@ -4,7 +4,7 @@ services:
     container_name: secureclaims-db
     restart: always
     environment:
-      POSTGRES_USER: admin
+      POSTGRES_USER: scadmin
       POSTGRES_PASSWORD: admin123
       POSTGRES_DB: secureclaims
     ports:
@@ -12,7 +12,7 @@ services:
     volumes:
       - secureclaims-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d secureclaims"]
+      test: ["CMD-SHELL", "pg_isready -U scadmin -d secureclaims"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +32,7 @@ services:
       DB_HOST: secureclaims-db
       DB_PORT: 5432
       DB_NAME: secureclaims
-      DB_USERNAME: admin
+      DB_USERNAME: scadmin
       DB_PASSWORD: admin123
       JWT_SECRET: my-dev-secret-key-at-least-32-chars-long
       JWT_EXPIRY_MS: 86400000
@@ -61,7 +61,7 @@ services:
       DB_HOST: secureclaims-db
       DB_PORT: 5432
       DB_NAME: secureclaims
-      DB_USERNAME: admin
+      DB_USERNAME: scadmin
       DB_PASSWORD: admin123
       JWT_SECRET: my-dev-secret-key-at-least-32-chars-long
       JWT_EXPIRY_MS: 86400000
@@ -90,7 +90,7 @@ services:
       DB_HOST: secureclaims-db
       DB_PORT: 5432
       DB_NAME: secureclaims
-      DB_USERNAME: admin
+      DB_USERNAME: scadmin
       DB_PASSWORD: admin123
       JWT_SECRET: my-dev-secret-key-at-least-32-chars-long
       JWT_EXPIRY_MS: 86400000
@@ -119,7 +119,7 @@ services:
       DB_HOST: secureclaims-db
       DB_PORT: 5432
       DB_NAME: secureclaims
-      DB_USERNAME: admin
+      DB_USERNAME: scadmin
       DB_PASSWORD: admin123
       JWT_SECRET: my-dev-secret-key-at-least-32-chars-long
       JWT_EXPIRY_MS: 86400000

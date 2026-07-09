@@ -1,0 +1,528 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  SecureClaims AI - Complete Infrastructure Stack
+  Deploys VPC, EC2 (Docker), RDS PostgreSQL for microservices.
+  Region: ap-south-1 | Cost: $0 (Free Tier eligible)
+
+# ==============================================================================
+# PARAMETERS
+# ==============================================================================
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: secureclaims
+    Description: Prefix for all resource names
+
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: VPC CIDR block
+
+  PublicSubnet1CIDR:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: Public Subnet A CIDR (AZ-1)
+
+  PublicSubnet2CIDR:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: Public Subnet B CIDR (AZ-2)
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t4g.micro
+      - t4g.small
+    Description: EC2 instance type (t3.small = free tier, 2GB RAM)
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 Key Pair for SSH access
+
+  SSHLocation:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: IP range allowed for SSH (use your-ip/32 for security)
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+    Description: RDS instance class (db.t3.micro = free tier)
+
+  DBName:
+    Type: String
+    Default: secureclaims
+    Description: PostgreSQL database name
+
+  DBUsername:
+    Type: String
+    Default: scadmin
+    Description: Database master username
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    Description: Database master password (min 8 characters)
+
+  JWTSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: JWT signing secret (min 32 characters)
+
+  GitHubUsername:
+    Type: String
+    Default: meena13oct
+    Description: GitHub username for ghcr.io image pull
+
+  GitHubPAT:
+    Type: String
+    NoEcho: true
+    Description: GitHub Personal Access Token with read:packages scope
+
+# ==============================================================================
+# MAPPINGS - AMI IDs per region (Amazon Linux 2023)
+# ==============================================================================
+Mappings:
+  RegionAMI:
+    ap-south-1:
+      AMI: "ami-01971107641e9b67d"
+    us-east-1:
+      AMI: "ami-0c7217cdde317cfec"
+    us-west-2:
+      AMI: "ami-008fe2fc65df48dac"
+    eu-west-1:
+      AMI: "ami-0905a3c97561e0b69"
+
+# ==============================================================================
+# RESOURCES
+# ==============================================================================
+Resources:
+
+  # ============================================================================
+  # NETWORKING - VPC, Subnets, Internet Gateway, Route Tables
+  # ============================================================================
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-igw
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-public-subnet-1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-public-subnet-2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-public-rt
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+
+  # ============================================================================
+  # SECURITY - Security Groups, IAM Role, Instance Profile
+  # ============================================================================
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for SecureClaims EC2 instance
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+          Description: SSH access
+        - IpProtocol: tcp
+          FromPort: 8081
+          ToPort: 8081
+          CidrIp: 0.0.0.0/0
+          Description: Identity Service
+        - IpProtocol: tcp
+          FromPort: 8082
+          ToPort: 8082
+          CidrIp: 0.0.0.0/0
+          Description: Claims Service
+        - IpProtocol: tcp
+          FromPort: 8083
+          ToPort: 8083
+          CidrIp: 0.0.0.0/0
+          Description: Fraud Detection Service
+        - IpProtocol: tcp
+          FromPort: 8084
+          ToPort: 8084
+          CidrIp: 0.0.0.0/0
+          Description: Notification Service
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ec2-sg
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for SecureClaims RDS instance
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+          Description: PostgreSQL access from EC2 only
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-rds-sg
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-ec2-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ec2-role
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${EnvironmentName}-ec2-profile
+      Roles:
+        - !Ref EC2Role
+
+
+  # ============================================================================
+  # DATABASE - RDS PostgreSQL
+  # ============================================================================
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for SecureClaims RDS
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-db-subnet-group
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub ${EnvironmentName}-db
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: '16'
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      DBName: !Ref DBName
+      AllocatedStorage: 20
+      StorageType: gp2
+      PubliclyAccessible: false
+      MultiAZ: false
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      BackupRetentionPeriod: 1
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-db
+
+
+  # ============================================================================
+  # COMPUTE - EC2 Instance with Docker + Docker Compose
+  # ============================================================================
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn: RDSInstance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      ImageId: !FindInMap [RegionAMI, !Ref 'AWS::Region', AMI]
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-app-server
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          yum update -y
+
+          # Create 2GB swap file to prevent OOM
+          dd if=/dev/zero of=/swapfile bs=128M count=16
+          chmod 600 /swapfile
+          mkswap /swapfile
+          swapon /swapfile
+          echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+
+          # Install and start SSM agent
+          yum install -y amazon-ssm-agent
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
+
+          # Install Docker
+          yum install -y docker
+          systemctl enable docker
+          systemctl start docker
+          usermod -a -G docker ec2-user
+
+          # Install Docker Compose
+          curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+            -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+
+          # Install PostgreSQL client for schema initialization
+          yum install -y postgresql16
+
+          # Login to GitHub Container Registry
+          echo "${GitHubPAT}" | docker login ghcr.io -u ${GitHubUsername} --password-stdin
+
+          # Create application directory
+          mkdir -p /home/ec2-user/secureclaims
+          cd /home/ec2-user/secureclaims
+
+          # Create docker-compose.prod.yaml
+          cat > docker-compose.prod.yaml << 'COMPOSE'
+          services:
+            identity-service:
+              image: ghcr.io/meena13oct/secureclaims-ai/identity-service:latest
+              restart: always
+              ports:
+                - "8081:8081"
+              environment:
+                SERVER_PORT: 8081
+                DB_HOST: DB_HOST_PLACEHOLDER
+                DB_PORT: 5432
+                DB_NAME: secureclaims
+                DB_USERNAME: scadmin
+                DB_PASSWORD: DB_PASS_PLACEHOLDER
+                JWT_SECRET: JWT_SECRET_PLACEHOLDER
+                JWT_EXPIRY_MS: 86400000
+
+            claims-service:
+              image: ghcr.io/meena13oct/secureclaims-ai/claims-service:latest
+              restart: always
+              ports:
+                - "8082:8082"
+              environment:
+                SERVER_PORT: 8082
+                DB_HOST: DB_HOST_PLACEHOLDER
+                DB_PORT: 5432
+                DB_NAME: secureclaims
+                DB_USERNAME: scadmin
+                DB_PASSWORD: DB_PASS_PLACEHOLDER
+                JWT_SECRET: JWT_SECRET_PLACEHOLDER
+                JWT_EXPIRY_MS: 86400000
+
+            fraud-detection-service:
+              image: ghcr.io/meena13oct/secureclaims-ai/fraud-detection-service:latest
+              restart: always
+              ports:
+                - "8083:8083"
+              environment:
+                SERVER_PORT: 8083
+                DB_HOST: DB_HOST_PLACEHOLDER
+                DB_PORT: 5432
+                DB_NAME: secureclaims
+                DB_USERNAME: scadmin
+                DB_PASSWORD: DB_PASS_PLACEHOLDER
+                JWT_SECRET: JWT_SECRET_PLACEHOLDER
+                JWT_EXPIRY_MS: 86400000
+
+            notification-service:
+              image: ghcr.io/meena13oct/secureclaims-ai/notification-service:latest
+              restart: always
+              ports:
+                - "8084:8084"
+              environment:
+                SERVER_PORT: 8084
+                DB_HOST: DB_HOST_PLACEHOLDER
+                DB_PORT: 5432
+                DB_NAME: secureclaims
+                DB_USERNAME: scadmin
+                DB_PASSWORD: DB_PASS_PLACEHOLDER
+                JWT_SECRET: JWT_SECRET_PLACEHOLDER
+                JWT_EXPIRY_MS: 86400000
+          COMPOSE
+
+          # Replace placeholders with actual values
+          RDS_ENDPOINT="${RDSInstance.Endpoint.Address}"
+          sed -i "s|DB_HOST_PLACEHOLDER|$RDS_ENDPOINT|g" docker-compose.prod.yaml
+          sed -i "s|DB_PASS_PLACEHOLDER|${DBPassword}|g" docker-compose.prod.yaml
+          sed -i "s|JWT_SECRET_PLACEHOLDER|${JWTSecret}|g" docker-compose.prod.yaml
+
+          # Wait for RDS to be ready
+          echo "Waiting for RDS to accept connections..."
+          for i in $(seq 1 30); do
+            PGPASSWORD=${DBPassword} psql -h $RDS_ENDPOINT -U ${DBUsername} -d ${DBName} -c "SELECT 1;" && break
+            echo "Attempt $i - RDS not ready, waiting 10s..."
+            sleep 10
+          done
+
+          # Initialize database schemas
+          PGPASSWORD=${DBPassword} psql -h $RDS_ENDPOINT -U ${DBUsername} -d ${DBName} << 'SQL'
+          CREATE SCHEMA IF NOT EXISTS identity;
+          CREATE SCHEMA IF NOT EXISTS claims;
+          CREATE SCHEMA IF NOT EXISTS fraud;
+          CREATE SCHEMA IF NOT EXISTS notifications;
+          SQL
+
+          # Pull and start services
+          docker-compose -f docker-compose.prod.yaml up -d
+
+          # Set ownership
+          chown -R ec2-user:ec2-user /home/ec2-user/secureclaims
+
+
+  # ============================================================================
+  # ELASTIC IP - Static public IP address
+  # ============================================================================
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-eip
+
+  ElasticIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref EC2Instance
+      AllocationId: !GetAtt ElasticIP.AllocationId
+
+
+# ==============================================================================
+# OUTPUTS
+# ==============================================================================
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${EnvironmentName}-vpc-id
+
+  EC2PublicIP:
+    Description: Static Elastic IP of the EC2 instance
+    Value: !Ref ElasticIP
+    Export:
+      Name: !Sub ${EnvironmentName}-ec2-ip
+
+  EC2PublicDNS:
+    Description: Public DNS of the EC2 instance
+    Value: !GetAtt EC2Instance.PublicDnsName
+    Export:
+      Name: !Sub ${EnvironmentName}-ec2-dns
+
+  RDSEndpoint:
+    Description: RDS PostgreSQL endpoint
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${EnvironmentName}-rds-endpoint
+
+  IdentityServiceURL:
+    Description: Identity Service health check URL
+    Value: !Sub http://${ElasticIP}:8081/actuator/health
+
+  ClaimsServiceURL:
+    Description: Claims Service health check URL
+    Value: !Sub http://${ElasticIP}:8082/actuator/health
+
+  FraudDetectionServiceURL:
+    Description: Fraud Detection Service health check URL
+    Value: !Sub http://${ElasticIP}:8083/actuator/health
+
+  NotificationServiceURL:
+    Description: Notification Service health check URL
+    Value: !Sub http://${ElasticIP}:8084/actuator/health
+
+  SSHCommand:
+    Description: SSH command to connect to EC2
+    Value: !Sub ssh -i ${KeyPairName}.pem ec2-user@${ElasticIP}

@@ -1,0 +1,670 @@
+{
+  "info": {
+    "name": "SecureClaims AI - Production",
+    "_postman_id": "secureclaims-prod-collection",
+    "description": "Production test collection for SecureClaims AI microservices running on AWS EC2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://13.207.68.121"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "claimId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Identity Service Health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}:8081/actuator/health"
+          }
+        },
+        {
+          "name": "Claims Service Health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}:8082/actuator/health"
+          }
+        },
+        {
+          "name": "Fraud Detection Service Health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}:8083/actuator/health"
+          }
+        },
+        {
+          "name": "Notification Service Health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}:8084/actuator/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Identity Service",
+      "item": [
+        {
+          "name": "Register User (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.userId) {",
+                  "    pm.collectionVariables.set('userId', jsonData.data.userId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Meena\",\n  \"lastName\": \"Admin\",\n  \"email\": \"admin@secureclaims.com\",\n  \"username\": \"meenaadmin\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/register"
+          }
+        },
+        {
+          "name": "Register User - Validation Error (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"\",\n  \"lastName\": \"\",\n  \"email\": \"invalid\",\n  \"username\": \"\",\n  \"password\": \"\"\n}"
+            },
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/register"
+          }
+        },
+        {
+          "name": "Register User - Duplicate Email (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409', function() {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Meena\",\n  \"lastName\": \"Admin\",\n  \"email\": \"admin@secureclaims.com\",\n  \"username\": \"meenaadmin\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/register"
+          }
+        },
+        {
+          "name": "Login Success (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    pm.collectionVariables.set('adminToken', jsonData.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@secureclaims.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/login"
+          }
+        },
+        {
+          "name": "Login - Wrong Password (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@secureclaims.com\",\n  \"password\": \"WrongPass123\"\n}"
+            },
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/login"
+          }
+        },
+        {
+          "name": "Login - Non-existent Email (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nonexistent@example.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/login"
+          }
+        },
+        {
+          "name": "Get My Profile (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/me"
+          }
+        },
+        {
+          "name": "Get My Profile - No Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}:8081/api/identity/v1/auth/me"
+          }
+        },
+        {
+          "name": "Admin: List All Users (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}:8081/api/identity/v1/admin/users?page=0&size=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Claims Service",
+      "item": [
+        {
+          "name": "Submit Claim (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.claimId) {",
+                  "    pm.collectionVariables.set('claimId', jsonData.data.claimId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyNumber\": \"POL-2026-00123\",\n  \"claimType\": \"MEDICAL\",\n  \"incidentDate\": \"2026-06-20\",\n  \"description\": \"Hospitalisation due to surgery\",\n  \"claimedAmount\": 75000.00\n}"
+            },
+            "url": "{{baseUrl}}:8082/api/claims/v1/claims"
+          }
+        },
+        {
+          "name": "Submit Claim - Validation Error (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyNumber\": \"\",\n  \"claimType\": \"\",\n  \"incidentDate\": null,\n  \"description\": \"\",\n  \"claimedAmount\": 0\n}"
+            },
+            "url": "{{baseUrl}}:8082/api/claims/v1/claims"
+          }
+        },
+        {
+          "name": "Submit Claim - No Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyNumber\": \"POL-2026-00123\",\n  \"claimType\": \"MEDICAL\",\n  \"incidentDate\": \"2026-06-20\",\n  \"description\": \"Test\",\n  \"claimedAmount\": 5000.00\n}"
+            },
+            "url": "{{baseUrl}}:8082/api/claims/v1/claims"
+          }
+        },
+        {
+          "name": "List My Claims (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}:8082/api/claims/v1/claims?page=0&size=10"
+          }
+        },
+        {
+          "name": "Get Claim By ID (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}:8082/api/claims/v1/claims/{{claimId}}"
+          }
+        },
+        {
+          "name": "Get Claim - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}:8082/api/claims/v1/claims/00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+          "name": "Admin: List All Claims (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}:8082/api/claims/v1/admin/claims?page=0&size=10"
+          }
+        },
+        {
+          "name": "Admin: Update Claim Status to UNDER_REVIEW (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"UNDER_REVIEW\"\n}"
+            },
+            "url": "{{baseUrl}}:8082/api/claims/v1/admin/claims/{{claimId}}/status"
+          }
+        },
+        {
+          "name": "Admin: Update Claim Status to APPROVED (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\"\n}"
+            },
+            "url": "{{baseUrl}}:8082/api/claims/v1/admin/claims/{{claimId}}/status"
+          }
+        },
+        {
+          "name": "Admin: Invalid Status Transition (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUBMITTED\"\n}"
+            },
+            "url": "{{baseUrl}}:8082/api/claims/v1/admin/claims/{{claimId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fraud Detection Service",
+      "item": [
+        {
+          "name": "Admin: Get Fraud Analysis for Claim (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}:8083/api/fraud/v1/admin/fraud/{{claimId}}"
+          }
+        },
+        {
+          "name": "Admin: Get Fraud Analysis - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}:8083/api/fraud/v1/admin/fraud/00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+          "name": "Admin: Get Fraud Analysis - No Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}:8083/api/fraud/v1/admin/fraud/{{claimId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Service",
+      "item": [
+        {
+          "name": "Admin: Get Notifications for User (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}:8084/api/notifications/v1/admin/notifications/{{userId}}?page=0&size=10"
+          }
+        },
+        {
+          "name": "Admin: Get Notifications - No Token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}:8084/api/notifications/v1/admin/notifications/{{userId}}?page=0&size=10"
+          }
+        }
+      ]
+    }
+  ]
+}

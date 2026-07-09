@@ -79,5 +79,26 @@
       "requests": {}
     }
   },
-  "environments": {}
+  "environments": {
+    "local": {
+      "name": "Local Development",
+      "values": {
+        "baseUrl": "http://localhost",
+        "identityServiceUrl": "http://localhost:8081",
+        "claimsServiceUrl": "http://localhost:8082",
+        "fraudServiceUrl": "http://localhost:8083",
+        "notificationServiceUrl": "http://localhost:8084"
+      }
+    },
+    "production": {
+      "name": "AWS Production",
+      "values": {
+        "baseUrl": "http://13.207.68.121",
+        "identityServiceUrl": "http://13.207.68.121:8081",
+        "claimsServiceUrl": "http://13.207.68.121:8082",
+        "fraudServiceUrl": "http://13.207.68.121:8083",
+        "notificationServiceUrl": "http://13.207.68.121:8084"
+      }
+    }
+  }
 }
