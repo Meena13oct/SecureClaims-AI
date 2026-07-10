@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 public class AuthServiceImpl implements AuthService {
 
     private static final String ROLE_USER = "USER";
+    private static final String ROLE_ADMIN = "ADMIN";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -42,7 +43,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
 
     /**
-     * Register a new user account with the USER role.
+     * Register a new user account.
+     * The first registered user is assigned the ADMIN role; all subsequent users receive the USER role.
      *
      * @param request the registration request containing user details
      * @return the created user's response details
@@ -62,9 +64,13 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateResourceException("Username already in use");
         }
 
-        // Fetch the USER role
-        final Role userRole = roleRepository.findByName(ROLE_USER)
-                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", ROLE_USER));
+        // Determine role: first user gets ADMIN, subsequent users get USER
+        final boolean isFirstUser = userRepository.count() == 0;
+        final String roleName = isFirstUser ? ROLE_ADMIN : ROLE_USER;
+
+        // Fetch the appropriate role
+        final Role assignedRole = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
 
         // Build and save the user entity
         final User user = new User();
@@ -73,10 +79,10 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(request.getEmail());
         user.setUsername(request.getUsername());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setRoles(Set.of(userRole));
+        user.setRoles(Set.of(assignedRole));
 
         final User savedUser = userRepository.save(user);
-        log.info("User registered: userId={}, username={}", savedUser.getId(), savedUser.getUsername());
+        log.info("User registered: userId={}, username={}, role={}", savedUser.getId(), savedUser.getUsername(), roleName);
 
         return mapToUserResponse(savedUser);
     }

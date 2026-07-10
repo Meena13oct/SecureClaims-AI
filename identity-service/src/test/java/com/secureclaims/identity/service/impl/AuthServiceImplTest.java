@@ -28,12 +28,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for AuthServiceImpl.
- * Covers US-003 (register) and US-004 (login).
+ * Covers US-003 (register) and US-004 (login), including first-user-is-ADMIN logic.
  *
  * @author SecureClaims Team
  * @since 1.0
@@ -57,7 +56,33 @@ class AuthServiceImplTest {
     private AuthServiceImpl authService;
 
     @Test
-    void should_registerUser_when_validRequest() {
+    void should_assignAdminRole_when_firstUserRegisters() {
+        // given
+        final RegisterRequest request = buildRegisterRequest();
+        final Role adminRole = buildRole("ADMIN");
+        final User savedUser = buildUser(adminRole);
+
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(userRepository.existsByUsername(request.getUsername())).thenReturn(false);
+        when(userRepository.count()).thenReturn(0L);
+        when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(adminRole));
+        when(passwordEncoder.encode(request.getPassword())).thenReturn("$2a$10$encodedHash");
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        // when
+        final UserResponse response = authService.register(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUsername()).isEqualTo("janedoe");
+        assertThat(response.getEmail()).isEqualTo("jane.doe@example.com");
+        assertThat(response.getRoles()).contains("ADMIN");
+        verify(roleRepository).findByName("ADMIN");
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void should_assignUserRole_when_subsequentUserRegisters() {
         // given
         final RegisterRequest request = buildRegisterRequest();
         final Role userRole = buildRole("USER");
@@ -65,6 +90,7 @@ class AuthServiceImplTest {
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(userRepository.existsByUsername(request.getUsername())).thenReturn(false);
+        when(userRepository.count()).thenReturn(1L);
         when(roleRepository.findByName("USER")).thenReturn(Optional.of(userRole));
         when(passwordEncoder.encode(request.getPassword())).thenReturn("$2a$10$encodedHash");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -77,6 +103,7 @@ class AuthServiceImplTest {
         assertThat(response.getUsername()).isEqualTo("janedoe");
         assertThat(response.getEmail()).isEqualTo("jane.doe@example.com");
         assertThat(response.getRoles()).contains("USER");
+        verify(roleRepository).findByName("USER");
         verify(userRepository).save(any(User.class));
     }
 

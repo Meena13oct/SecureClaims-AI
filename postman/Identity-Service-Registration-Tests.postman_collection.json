@@ -1,0 +1,248 @@
+{
+  "info": {
+    "name": "Identity Service - Registration Tests (First User = ADMIN)",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "Test cases to verify that the first registered user gets ADMIN role and subsequent users get USER role.\n\nPREREQUISITE: The users and user_roles tables must be empty before running these tests.\n\nRun the requests IN ORDER:\n1. Register First User (expects ADMIN role)\n2. Register Second User (expects USER role)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://13.207.68.121:8081",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "TC-01: Register First User - Should Get ADMIN Role",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Verify HTTP 201 Created",
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "// Parse response body",
+              "const response = pm.response.json();",
+              "",
+              "pm.test('Response message is User registered successfully', function () {",
+              "    pm.expect(response.message).to.eql('User registered successfully');",
+              "});",
+              "",
+              "pm.test('First user is assigned ADMIN role', function () {",
+              "    pm.expect(response.data.roles).to.include('ADMIN');",
+              "});",
+              "",
+              "pm.test('Response contains userId', function () {",
+              "    pm.expect(response.data.userId).to.not.be.null;",
+              "    pm.expect(response.data.userId).to.not.be.empty;",
+              "});",
+              "",
+              "pm.test('Response contains correct username', function () {",
+              "    pm.expect(response.data.username).to.eql('adminuser');",
+              "});",
+              "",
+              "pm.test('Response contains correct email', function () {",
+              "    pm.expect(response.data.email).to.eql('admin@secureclaims.com');",
+              "});",
+              "",
+              "// Store adminToken for subsequent requests",
+              "if (response.data && response.data.userId) {",
+              "    pm.collectionVariables.set('adminUserId', response.data.userId);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"firstName\": \"Admin\",\n    \"lastName\": \"User\",\n    \"email\": \"admin@secureclaims.com\",\n    \"username\": \"adminuser\",\n    \"password\": \"Admin@123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/identity/v1/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "identity", "v1", "auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "TC-02: Register Second User - Should Get USER Role",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Verify HTTP 201 Created",
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "// Parse response body",
+              "const response = pm.response.json();",
+              "",
+              "pm.test('Response message is User registered successfully', function () {",
+              "    pm.expect(response.message).to.eql('User registered successfully');",
+              "});",
+              "",
+              "pm.test('Second user is assigned USER role (not ADMIN)', function () {",
+              "    pm.expect(response.data.roles).to.include('USER');",
+              "    pm.expect(response.data.roles).to.not.include('ADMIN');",
+              "});",
+              "",
+              "pm.test('Response contains userId', function () {",
+              "    pm.expect(response.data.userId).to.not.be.null;",
+              "    pm.expect(response.data.userId).to.not.be.empty;",
+              "});",
+              "",
+              "pm.test('Response contains correct username', function () {",
+              "    pm.expect(response.data.username).to.eql('regularuser');",
+              "});",
+              "",
+              "pm.test('Response contains correct email', function () {",
+              "    pm.expect(response.data.email).to.eql('user@secureclaims.com');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"firstName\": \"Regular\",\n    \"lastName\": \"User\",\n    \"email\": \"user@secureclaims.com\",\n    \"username\": \"regularuser\",\n    \"password\": \"User@1234\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/identity/v1/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "identity", "v1", "auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "TC-03: Login as Admin - Verify ADMIN in Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const response = pm.response.json();",
+              "",
+              "pm.test('Login returns a JWT token', function () {",
+              "    pm.expect(response.data.token).to.not.be.null;",
+              "    pm.expect(response.data.token).to.not.be.empty;",
+              "});",
+              "",
+              "// Decode JWT payload and verify ADMIN role",
+              "const token = response.data.token;",
+              "const payload = JSON.parse(atob(token.split('.')[1]));",
+              "",
+              "pm.test('JWT contains ROLE_ADMIN', function () {",
+              "    pm.expect(payload.roles).to.include('ROLE_ADMIN');",
+              "});",
+              "",
+              "// Store token for use in admin-protected endpoints",
+              "pm.collectionVariables.set('adminToken', token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"admin@secureclaims.com\",\n    \"password\": \"Admin@123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/identity/v1/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "identity", "v1", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "TC-04: Login as Regular User - Verify USER in Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const response = pm.response.json();",
+              "",
+              "pm.test('Login returns a JWT token', function () {",
+              "    pm.expect(response.data.token).to.not.be.null;",
+              "    pm.expect(response.data.token).to.not.be.empty;",
+              "});",
+              "",
+              "// Decode JWT payload and verify USER role (not ADMIN)",
+              "const token = response.data.token;",
+              "const payload = JSON.parse(atob(token.split('.')[1]));",
+              "",
+              "pm.test('JWT contains ROLE_USER', function () {",
+              "    pm.expect(payload.roles).to.include('ROLE_USER');",
+              "});",
+              "",
+              "pm.test('JWT does NOT contain ROLE_ADMIN', function () {",
+              "    pm.expect(payload.roles).to.not.include('ROLE_ADMIN');",
+              "});",
+              "",
+              "pm.collectionVariables.set('userToken', token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"user@secureclaims.com\",\n    \"password\": \"User@1234\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/identity/v1/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "identity", "v1", "auth", "login"]
+        }
+      }
+    }
+  ]
+}
