@@ -102,7 +102,7 @@ jobs:
       # --------------------------------------------------------------------------
       - name: Initialize database schemas
         run: |
-          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ vars.DB_HOST }} -U ${{ secrets.DB_USERNAME }} -d ${{ vars.DB_NAME }} -f dbScripts/V0__create_database_and_schemas.sql
+          PGPASSWORD=${{ vars.DB_PASSWORD }} psql -h ${{ vars.DB_HOST }} -U ${{ vars.DB_USERNAME }} -d ${{ vars.DB_NAME }} -f dbScripts/V0__create_database_and_schemas.sql
 
       # --------------------------------------------------------------------------
       # Run unit tests across all modules
