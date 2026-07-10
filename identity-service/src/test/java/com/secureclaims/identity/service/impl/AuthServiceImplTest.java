@@ -64,7 +64,7 @@ class AuthServiceImplTest {
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(userRepository.existsByUsername(request.getUsername())).thenReturn(false);
-        when(userRepository.count()).thenReturn(0L);
+        when(userRepository.existsByRolesName("ADMIN")).thenReturn(false);
         when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(adminRole));
         when(passwordEncoder.encode(request.getPassword())).thenReturn("$2a$10$encodedHash");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -90,7 +90,7 @@ class AuthServiceImplTest {
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(userRepository.existsByUsername(request.getUsername())).thenReturn(false);
-        when(userRepository.count()).thenReturn(1L);
+        when(userRepository.existsByRolesName("ADMIN")).thenReturn(true);
         when(roleRepository.findByName("USER")).thenReturn(Optional.of(userRole));
         when(passwordEncoder.encode(request.getPassword())).thenReturn("$2a$10$encodedHash");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);

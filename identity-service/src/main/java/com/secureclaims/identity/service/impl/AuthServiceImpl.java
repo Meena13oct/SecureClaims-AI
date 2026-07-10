@@ -64,9 +64,9 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateResourceException("Username already in use");
         }
 
-        // Determine role: first user gets ADMIN, subsequent users get USER
-        final boolean isFirstUser = userRepository.count() == 0;
-        final String roleName = isFirstUser ? ROLE_ADMIN : ROLE_USER;
+        // Determine role: if no ADMIN user exists in the database, assign ADMIN; otherwise USER
+        final boolean adminExists = userRepository.existsByRolesName(ROLE_ADMIN);
+        final String roleName = adminExists ? ROLE_USER : ROLE_ADMIN;
 
         // Fetch the appropriate role
         final Role assignedRole = roleRepository.findByName(roleName)
