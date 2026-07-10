@@ -18,12 +18,12 @@ CREATE SCHEMA IF NOT EXISTS fraud;
 CREATE SCHEMA IF NOT EXISTS notifications;
 
 -- ============================================================
--- Grant permissions (adjust username if different)
+-- Grant permissions to the application user
 -- ============================================================
-GRANT ALL PRIVILEGES ON SCHEMA identity TO postgres;
-GRANT ALL PRIVILEGES ON SCHEMA claims TO postgres;
-GRANT ALL PRIVILEGES ON SCHEMA fraud TO postgres;
-GRANT ALL PRIVILEGES ON SCHEMA notifications TO postgres;
+GRANT ALL PRIVILEGES ON SCHEMA identity TO CURRENT_USER;
+GRANT ALL PRIVILEGES ON SCHEMA claims TO CURRENT_USER;
+GRANT ALL PRIVILEGES ON SCHEMA fraud TO CURRENT_USER;
+GRANT ALL PRIVILEGES ON SCHEMA notifications TO CURRENT_USER;
 
 -- ============================================================
 -- Verify schemas created
