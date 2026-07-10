@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Identity Service - Registration Tests (First User = ADMIN)",
+    "name": "Identity Service - Registration & Login Tests",
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "description": "Test cases to verify that the first registered user gets ADMIN role and subsequent users get USER role.\n\nPREREQUISITE: The users and user_roles tables must be empty before running these tests.\n\nRun the requests IN ORDER:\n1. Register First User (expects ADMIN role)\n2. Register Second User (expects USER role)",
+    "description": "Test cases for Identity Service covering US-003 (Registration) and US-004 (Login).\n\nVerifies that the first registered user gets ADMIN role and subsequent users get USER role.\n\nPREREQUISITE: The identity.users and identity.user_roles tables must be empty before running.\n\nEXECUTION ORDER:\n  TC-001 → TC-002 → TC-003 → TC-004\n\nRun the requests strictly in numbered order.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,47 +10,67 @@
       "key": "baseUrl",
       "value": "http://13.207.68.121:8081",
       "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "regularUserId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "TC-01: Register First User - Should Get ADMIN Role",
+      "name": "TC-001 [US-003] Register First User - Expects ADMIN Role",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "// Verify HTTP 201 Created",
-              "pm.test('Status code is 201', function () {",
+              "// TC-001 | US-003 | Register First User → ADMIN Role",
+              "",
+              "pm.test('TC-001: Status code is 201 Created', function () {",
               "    pm.response.to.have.status(201);",
               "});",
               "",
-              "// Parse response body",
               "const response = pm.response.json();",
               "",
-              "pm.test('Response message is User registered successfully', function () {",
+              "pm.test('TC-001: Response message confirms registration', function () {",
               "    pm.expect(response.message).to.eql('User registered successfully');",
               "});",
               "",
-              "pm.test('First user is assigned ADMIN role', function () {",
+              "pm.test('TC-001: First user is assigned ADMIN role', function () {",
               "    pm.expect(response.data.roles).to.include('ADMIN');",
               "});",
               "",
-              "pm.test('Response contains userId', function () {",
+              "pm.test('TC-001: Response contains a valid userId (UUID)', function () {",
               "    pm.expect(response.data.userId).to.not.be.null;",
-              "    pm.expect(response.data.userId).to.not.be.empty;",
+              "    pm.expect(response.data.userId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);",
               "});",
               "",
-              "pm.test('Response contains correct username', function () {",
+              "pm.test('TC-001: Response contains correct username', function () {",
               "    pm.expect(response.data.username).to.eql('adminuser');",
               "});",
               "",
-              "pm.test('Response contains correct email', function () {",
+              "pm.test('TC-001: Response contains correct email', function () {",
               "    pm.expect(response.data.email).to.eql('admin@secureclaims.com');",
               "});",
               "",
-              "// Store adminToken for subsequent requests",
+              "// Store for subsequent tests",
               "if (response.data && response.data.userId) {",
               "    pm.collectionVariables.set('adminUserId', response.data.userId);",
               "}"
@@ -78,42 +98,50 @@
       }
     },
     {
-      "name": "TC-02: Register Second User - Should Get USER Role",
+      "name": "TC-002 [US-003] Register Second User - Expects USER Role",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "// Verify HTTP 201 Created",
-              "pm.test('Status code is 201', function () {",
+              "// TC-002 | US-003 | Register Second User → USER Role",
+              "",
+              "pm.test('TC-002: Status code is 201 Created', function () {",
               "    pm.response.to.have.status(201);",
               "});",
               "",
-              "// Parse response body",
               "const response = pm.response.json();",
               "",
-              "pm.test('Response message is User registered successfully', function () {",
+              "pm.test('TC-002: Response message confirms registration', function () {",
               "    pm.expect(response.message).to.eql('User registered successfully');",
               "});",
               "",
-              "pm.test('Second user is assigned USER role (not ADMIN)', function () {",
+              "pm.test('TC-002: Second user is assigned USER role', function () {",
               "    pm.expect(response.data.roles).to.include('USER');",
+              "});",
+              "",
+              "pm.test('TC-002: Second user does NOT have ADMIN role', function () {",
               "    pm.expect(response.data.roles).to.not.include('ADMIN');",
               "});",
               "",
-              "pm.test('Response contains userId', function () {",
+              "pm.test('TC-002: Response contains a valid userId (UUID)', function () {",
               "    pm.expect(response.data.userId).to.not.be.null;",
-              "    pm.expect(response.data.userId).to.not.be.empty;",
+              "    pm.expect(response.data.userId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);",
               "});",
               "",
-              "pm.test('Response contains correct username', function () {",
+              "pm.test('TC-002: Response contains correct username', function () {",
               "    pm.expect(response.data.username).to.eql('regularuser');",
               "});",
               "",
-              "pm.test('Response contains correct email', function () {",
+              "pm.test('TC-002: Response contains correct email', function () {",
               "    pm.expect(response.data.email).to.eql('user@secureclaims.com');",
-              "});"
+              "});",
+              "",
+              "// Store for subsequent tests",
+              "if (response.data && response.data.userId) {",
+              "    pm.collectionVariables.set('regularUserId', response.data.userId);",
+              "}"
             ]
           }
         }
@@ -138,20 +166,22 @@
       }
     },
     {
-      "name": "TC-03: Login as Admin - Verify ADMIN in Token",
+      "name": "TC-003 [US-004] Login as Admin - Verify ROLE_ADMIN in JWT",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Status code is 200', function () {",
+              "// TC-003 | US-004 | Login as Admin → ROLE_ADMIN in JWT",
+              "",
+              "pm.test('TC-003: Status code is 200 OK', function () {",
               "    pm.response.to.have.status(200);",
               "});",
               "",
               "const response = pm.response.json();",
               "",
-              "pm.test('Login returns a JWT token', function () {",
+              "pm.test('TC-003: Login returns a JWT token', function () {",
               "    pm.expect(response.data.token).to.not.be.null;",
               "    pm.expect(response.data.token).to.not.be.empty;",
               "});",
@@ -160,11 +190,18 @@
               "const token = response.data.token;",
               "const payload = JSON.parse(atob(token.split('.')[1]));",
               "",
-              "pm.test('JWT contains ROLE_ADMIN', function () {",
+              "pm.test('TC-003: JWT contains ROLE_ADMIN', function () {",
               "    pm.expect(payload.roles).to.include('ROLE_ADMIN');",
               "});",
               "",
-              "// Store token for use in admin-protected endpoints",
+              "pm.test('TC-003: JWT subject matches adminUserId', function () {",
+              "    const adminUserId = pm.collectionVariables.get('adminUserId');",
+              "    if (adminUserId) {",
+              "        pm.expect(payload.sub).to.eql(adminUserId);",
+              "    }",
+              "});",
+              "",
+              "// Store admin token for use in protected endpoints",
               "pm.collectionVariables.set('adminToken', token);"
             ]
           }
@@ -190,36 +227,46 @@
       }
     },
     {
-      "name": "TC-04: Login as Regular User - Verify USER in Token",
+      "name": "TC-004 [US-004] Login as Regular User - Verify ROLE_USER in JWT",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Status code is 200', function () {",
+              "// TC-004 | US-004 | Login as Regular User → ROLE_USER in JWT (no ADMIN)",
+              "",
+              "pm.test('TC-004: Status code is 200 OK', function () {",
               "    pm.response.to.have.status(200);",
               "});",
               "",
               "const response = pm.response.json();",
               "",
-              "pm.test('Login returns a JWT token', function () {",
+              "pm.test('TC-004: Login returns a JWT token', function () {",
               "    pm.expect(response.data.token).to.not.be.null;",
               "    pm.expect(response.data.token).to.not.be.empty;",
               "});",
               "",
-              "// Decode JWT payload and verify USER role (not ADMIN)",
+              "// Decode JWT payload and verify USER role",
               "const token = response.data.token;",
               "const payload = JSON.parse(atob(token.split('.')[1]));",
               "",
-              "pm.test('JWT contains ROLE_USER', function () {",
+              "pm.test('TC-004: JWT contains ROLE_USER', function () {",
               "    pm.expect(payload.roles).to.include('ROLE_USER');",
               "});",
               "",
-              "pm.test('JWT does NOT contain ROLE_ADMIN', function () {",
+              "pm.test('TC-004: JWT does NOT contain ROLE_ADMIN', function () {",
               "    pm.expect(payload.roles).to.not.include('ROLE_ADMIN');",
               "});",
               "",
+              "pm.test('TC-004: JWT subject matches regularUserId', function () {",
+              "    const regularUserId = pm.collectionVariables.get('regularUserId');",
+              "    if (regularUserId) {",
+              "        pm.expect(payload.sub).to.eql(regularUserId);",
+              "    }",
+              "});",
+              "",
+              "// Store user token for use in user-level endpoints",
               "pm.collectionVariables.set('userToken', token);"
             ]
           }
