@@ -1,6 +1,7 @@
 package com.secureclaims.identity.controller;
 
 import com.secureclaims.identity.dto.response.ApiResponse;
+import com.secureclaims.identity.dto.response.PagedResponse;
 import com.secureclaims.identity.dto.response.UserResponse;
 import com.secureclaims.identity.service.UserAdminService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,7 +10,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,10 +46,10 @@ public class AdminUserController {
     })
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(final Pageable pageable) {
+    public ResponseEntity<ApiResponse<PagedResponse<UserResponse>>> getAllUsers(final Pageable pageable) {
 
         log.info("Admin request: listing all users, page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
-        final Page<UserResponse> users = userAdminService.getAllUsers(pageable);
+        final PagedResponse<UserResponse> users = userAdminService.getAllUsers(pageable);
         return ResponseEntity.ok(ApiResponse.success(200, "Users retrieved successfully", users));
     }
 }

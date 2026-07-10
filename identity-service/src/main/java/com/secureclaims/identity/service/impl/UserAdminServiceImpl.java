@@ -1,5 +1,6 @@
 package com.secureclaims.identity.service.impl;
 
+import com.secureclaims.identity.dto.response.PagedResponse;
 import com.secureclaims.identity.dto.response.UserResponse;
 import com.secureclaims.identity.entity.Role;
 import com.secureclaims.identity.entity.User;
@@ -31,13 +32,15 @@ public class UserAdminServiceImpl implements UserAdminService {
      * Retrieve a paginated list of all registered users.
      *
      * @param pageable pagination parameters
-     * @return page of user responses
+     * @return paginated response of user details
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<UserResponse> getAllUsers(final Pageable pageable) {
+    public PagedResponse<UserResponse> getAllUsers(final Pageable pageable) {
         log.info("Fetching all users, page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
-        return userRepository.findAll(pageable).map(this::mapToUserResponse);
+
+        final Page<UserResponse> userPage = userRepository.findAll(pageable).map(this::mapToUserResponse);
+        return PagedResponse.from(userPage);
     }
 
     private UserResponse mapToUserResponse(final User user) {
