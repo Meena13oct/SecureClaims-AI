@@ -73,6 +73,9 @@ jobs:
       SPRING_DATASOURCE_URL: jdbc:postgresql://${{ vars.DB_HOST }}:${{ vars.DB_PORT }}/${{ vars.DB_NAME }}
       SPRING_DATASOURCE_USERNAME: ${{ vars.DB_USERNAME }}
       SPRING_DATASOURCE_PASSWORD: ${{ vars.DB_PASSWORD }}
+      SPRING_FLYWAY_ENABLED: true
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: true
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: false
 
     steps:
       # Checkout source code
