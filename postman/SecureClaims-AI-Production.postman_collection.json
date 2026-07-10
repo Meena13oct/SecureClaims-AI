@@ -32,28 +32,28 @@
       "name": "Health Checks",
       "item": [
         {
-          "name": "US-020: Identity Service Health (Success - 200)",
+          "name": "US-020-TC01: Identity Service Health Check (200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}:8081/actuator/health"
           }
         },
         {
-          "name": "US-020: Claims Service Health (Success - 200)",
+          "name": "US-020-TC02: Claims Service Health Check (200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}:8082/actuator/health"
           }
         },
         {
-          "name": "US-020: Fraud Detection Service Health (Success - 200)",
+          "name": "US-020-TC03: Fraud Detection Service Health Check (200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}:8083/actuator/health"
           }
         },
         {
-          "name": "US-020: Notification Service Health (Success - 200)",
+          "name": "US-020-TC04: Notification Service Health Check (200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}:8084/actuator/health"
@@ -65,7 +65,7 @@
       "name": "Identity Service",
       "item": [
         {
-          "name": "US-003: Register New User (Success - 201)",
+          "name": "US-003-TC01: Register New User (Success - 201)",
           "event": [
             {
               "listen": "test",
@@ -101,7 +101,7 @@
           }
         },
         {
-          "name": "US-003: Register with Missing Fields (Validation - 400)",
+          "name": "US-003-TC03: Register with Missing Fields (Validation - 400)",
           "event": [
             {
               "listen": "test",
@@ -132,7 +132,7 @@
           }
         },
         {
-          "name": "US-003: Register with Duplicate Email (Conflict - 409)",
+          "name": "US-003-TC05: Register with Duplicate Email (Conflict - 409)",
           "event": [
             {
               "listen": "test",
@@ -162,7 +162,7 @@
           }
         },
         {
-          "name": "US-004: Login Success (Success - 200)",
+          "name": "US-004-TC01: Login Success (200)",
           "event": [
             {
               "listen": "test",
@@ -198,7 +198,7 @@
           }
         },
         {
-          "name": "US-004: Login with Wrong Password (Unauthorized - 401)",
+          "name": "US-004-TC02: Login with Wrong Password (Unauthorized - 401)",
           "event": [
             {
               "listen": "test",
@@ -228,7 +228,7 @@
           }
         },
         {
-          "name": "US-004: Login with Non-existent Email (Unauthorized - 401)",
+          "name": "US-004-TC03: Login with Non-existent Email (Unauthorized - 401)",
           "event": [
             {
               "listen": "test",
@@ -254,7 +254,7 @@
           }
         },
         {
-          "name": "US-006: Get Current User Profile (Success - 200)",
+          "name": "US-006-TC01: Get Current User Profile (200)",
           "event": [
             {
               "listen": "test",
@@ -285,7 +285,7 @@
           }
         },
         {
-          "name": "US-005: Access /auth/me Without Token (Unauthorized - 403)",
+          "name": "US-005-TC01: Access /auth/me Without Token (401/403)",
           "event": [
             {
               "listen": "test",
@@ -304,7 +304,7 @@
           }
         },
         {
-          "name": "US-016: Admin List All Users (Success - 200)",
+          "name": "US-016-TC01: Admin List All Users (Success - 200)",
           "event": [
             {
               "listen": "test",
@@ -331,7 +331,7 @@
       "name": "Claims Service",
       "item": [
         {
-          "name": "US-007: Submit a Claim (Success - 201)",
+          "name": "US-007-TC01: Submit a Claim (Success - 201)",
           "event": [
             {
               "listen": "test",
@@ -367,7 +367,7 @@
           }
         },
         {
-          "name": "US-007: Submit Claim with Missing Fields (Validation - 400)",
+          "name": "US-007-TC02: Submit Claim with Missing Fields (Validation - 400)",
           "event": [
             {
               "listen": "test",
@@ -394,7 +394,7 @@
           }
         },
         {
-          "name": "US-007: Submit Claim Without Token (Unauthorized - 401)",
+          "name": "US-007-TC03: Submit Claim Without Token (Unauthorized - 401)",
           "event": [
             {
               "listen": "test",
@@ -420,7 +420,7 @@
           }
         },
         {
-          "name": "US-008: List My Claims (Success - 200)",
+          "name": "US-008-TC01: List My Claims (Success - 200)",
           "event": [
             {
               "listen": "test",
@@ -442,7 +442,7 @@
           }
         },
         {
-          "name": "US-008: Get Claim By ID (Success - 200)",
+          "name": "US-008-TC02: Get Claim By ID (Success - 200)",
           "event": [
             {
               "listen": "test",
@@ -464,7 +464,7 @@
           }
         },
         {
-          "name": "US-008: Get Claim Not Found (Not Found - 404)",
+          "name": "US-008-TC03: Get Claim Not Found (404)",
           "event": [
             {
               "listen": "test",
@@ -486,7 +486,7 @@
           }
         },
         {
-          "name": "US-009: Admin List All Claims (Success - 200)",
+          "name": "US-009-TC01: Admin List All Claims (Success - 200)",
           "event": [
             {
               "listen": "test",
@@ -508,7 +508,7 @@
           }
         },
         {
-          "name": "US-009: Admin Update Claim to UNDER_REVIEW (Success - 200)",
+          "name": "US-009-TC02: Admin Update Claim to UNDER_REVIEW (200)",
           "event": [
             {
               "listen": "test",
@@ -535,7 +535,7 @@
           }
         },
         {
-          "name": "US-009: Admin Update Claim to APPROVED (Success - 200)",
+          "name": "US-009-TC05: Admin Update Claim to APPROVED (200)",
           "event": [
             {
               "listen": "test",
@@ -562,7 +562,7 @@
           }
         },
         {
-          "name": "US-009: Admin Invalid Status Transition (Bad Request - 400)",
+          "name": "US-009-TC03: Admin Invalid Status Transition (400)",
           "event": [
             {
               "listen": "test",
@@ -594,7 +594,7 @@
       "name": "Fraud Detection Service",
       "item": [
         {
-          "name": "US-015: Admin Get Fraud Analysis for Claim (Success - 200)",
+          "name": "US-015-TC01: Admin Get Fraud Analysis for Claim (200)",
           "event": [
             {
               "listen": "test",
@@ -616,7 +616,7 @@
           }
         },
         {
-          "name": "US-015: Admin Get Fraud Analysis Not Found (Not Found - 404)",
+          "name": "US-015-TC02: Admin Get Fraud Analysis Not Found (404)",
           "event": [
             {
               "listen": "test",
@@ -638,7 +638,7 @@
           }
         },
         {
-          "name": "US-015: Admin Get Fraud Analysis Without Token (Unauthorized - 401)",
+          "name": "US-015-TC05: Admin Get Fraud Analysis Without Token (401)",
           "event": [
             {
               "listen": "test",
@@ -662,7 +662,7 @@
       "name": "Notification Service",
       "item": [
         {
-          "name": "US-015: Admin Get Notifications for User (Success - 200)",
+          "name": "US-015-TC03: Admin Get Notifications for User (200)",
           "event": [
             {
               "listen": "test",
@@ -684,7 +684,7 @@
           }
         },
         {
-          "name": "US-015: Admin Get Notifications Without Token (Unauthorized - 401)",
+          "name": "US-015-TC06: Admin Get Notifications Without Token (401)",
           "event": [
             {
               "listen": "test",

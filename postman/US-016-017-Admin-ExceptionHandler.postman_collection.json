@@ -61,7 +61,7 @@
       "name": "US-016: Admin List All Users",
       "item": [
         {
-          "name": "List All Users - Admin (200)",
+          "name": "US-016-TC01: Admin List All Users (Success - 200)",
           "request": {
             "method": "GET",
             "url": "{{identityUrl}}/api/identity/v1/admin/users?page=0&size=10",
@@ -70,7 +70,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Users listed - 200', function() {", "  pm.response.to.have.status(200);", "  var json = pm.response.json();", "  pm.expect(json.data.content).to.be.an('array');", "  pm.expect(json.data.content.length).to.be.above(0);", "  pm.expect(json.data.content[0]).to.have.property('userId');", "  pm.expect(json.data.content[0]).to.have.property('username');", "  pm.expect(json.data.content[0]).to.have.property('email');", "  pm.expect(json.data.content[0]).to.have.property('roles');", "});"]}}]
         },
         {
-          "name": "List Users - USER Token (403)",
+          "name": "US-016-TC02: List Users with USER Token (Forbidden - 403)",
           "request": {
             "method": "GET",
             "url": "{{identityUrl}}/api/identity/v1/admin/users",
@@ -79,7 +79,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Forbidden for USER - 403', function() {", "  pm.response.to.have.status(403);", "});"]}}]
         },
         {
-          "name": "List Users - No Token (401)",
+          "name": "US-016-TC03: List Users Without Token (Unauthorized - 401)",
           "request": {
             "method": "GET",
             "url": "{{identityUrl}}/api/identity/v1/admin/users",
@@ -93,7 +93,7 @@
       "name": "US-017: Global Exception Handler",
       "item": [
         {
-          "name": "Validation Error - Claims (400)",
+          "name": "US-017-TC01: Validation Error in Claims Service (400)",
           "request": {
             "method": "POST",
             "url": "{{claimsUrl}}/api/claims/v1/claims",
@@ -109,7 +109,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Structured 400 response', function() {", "  pm.response.to.have.status(400);", "  var json = pm.response.json();", "  pm.expect(json).to.have.property('timestamp');", "  pm.expect(json).to.have.property('status', 400);", "  pm.expect(json).to.have.property('error');", "  pm.expect(json).to.have.property('message');", "  pm.expect(json).to.have.property('path');", "  pm.expect(json).to.have.property('fieldErrors');", "});"]}}]
         },
         {
-          "name": "Not Found - Claims (404)",
+          "name": "US-017-TC02: Not Found in Claims Service (404)",
           "request": {
             "method": "GET",
             "url": "{{claimsUrl}}/api/claims/v1/claims/00000000-0000-0000-0000-000000000000",
@@ -118,7 +118,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Structured 404 response', function() {", "  pm.response.to.have.status(404);", "  var json = pm.response.json();", "  pm.expect(json).to.have.property('timestamp');", "  pm.expect(json).to.have.property('status', 404);", "  pm.expect(json).to.have.property('error', 'Not Found');", "  pm.expect(json).to.have.property('message');", "  pm.expect(json).to.have.property('path');", "});"]}}]
         },
         {
-          "name": "Forbidden - Claims Admin (403)",
+          "name": "US-017-TC03: Forbidden on Claims Admin Endpoint (403)",
           "request": {
             "method": "GET",
             "url": "{{claimsUrl}}/api/claims/v1/admin/claims",
@@ -127,7 +127,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Structured 403 response', function() {", "  pm.response.to.have.status(403);", "});"]}}]
         },
         {
-          "name": "Validation Error - Identity Register (400)",
+          "name": "US-017-TC04: Validation Error in Identity Service (400)",
           "request": {
             "method": "POST",
             "url": "{{identityUrl}}/api/identity/v1/auth/register",
@@ -140,7 +140,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Structured validation error from Identity', function() {", "  pm.response.to.have.status(400);", "  var json = pm.response.json();", "  pm.expect(json).to.have.property('timestamp');", "  pm.expect(json).to.have.property('status', 400);", "  pm.expect(json).to.have.property('fieldErrors');", "  pm.expect(json.fieldErrors.length).to.be.above(0);", "});"]}}]
         },
         {
-          "name": "Not Found - Fraud Admin (404)",
+          "name": "US-017-TC05: Not Found in Fraud Service (404)",
           "request": {
             "method": "GET",
             "url": "{{fraudUrl}}/api/fraud/v1/admin/fraud/00000000-0000-0000-0000-000000000000",

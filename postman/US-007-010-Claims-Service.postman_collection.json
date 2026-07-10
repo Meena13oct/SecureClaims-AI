@@ -60,7 +60,7 @@
       "name": "US-007: Submit a Claim",
       "item": [
         {
-          "name": "Submit Claim - Success (201)",
+          "name": "US-007-TC01: Submit Claim (Success - 201)",
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/claims/v1/claims",
@@ -76,7 +76,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Claim submitted - 201 Created', function() {", "  pm.response.to.have.status(201);", "  var json = pm.response.json();", "  pm.expect(json.data.status).to.eql('SUBMITTED');", "  pm.expect(json.data.claimId).to.not.be.undefined;", "  pm.collectionVariables.set('claimId', json.data.claimId);", "});"]}}]
         },
         {
-          "name": "Submit Claim - Validation Error (400)",
+          "name": "US-007-TC02: Submit Claim with Missing Fields (Validation - 400)",
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/claims/v1/claims",
@@ -92,7 +92,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Validation error - 400', function() {", "  pm.response.to.have.status(400);", "  var json = pm.response.json();", "  pm.expect(json.fieldErrors).to.be.an('array');", "  pm.expect(json.fieldErrors.length).to.be.above(0);", "});"]}}]
         },
         {
-          "name": "Submit Claim - No Token (401)",
+          "name": "US-007-TC03: Submit Claim Without Token (Unauthorized - 401)",
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/claims/v1/claims",
@@ -110,7 +110,7 @@
       "name": "US-008: View Claims",
       "item": [
         {
-          "name": "List My Claims (200)",
+          "name": "US-008-TC01: List My Claims (Success - 200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/claims/v1/claims?page=0&size=10",
@@ -119,7 +119,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Claims listed - 200', function() {", "  pm.response.to.have.status(200);", "  var json = pm.response.json();", "  pm.expect(json.data.content).to.be.an('array');", "});"]}}]
         },
         {
-          "name": "Get Specific Claim (200)",
+          "name": "US-008-TC02: Get Claim By ID (Success - 200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/claims/v1/claims/{{claimId}}",
@@ -128,7 +128,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Claim retrieved - 200', function() {", "  pm.response.to.have.status(200);", "  var json = pm.response.json();", "  pm.expect(json.data.claimId).to.eql(pm.collectionVariables.get('claimId'));", "});"]}}]
         },
         {
-          "name": "Get Non-Existent Claim (404)",
+          "name": "US-008-TC03: Get Non-Existent Claim (Not Found - 404)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/claims/v1/claims/00000000-0000-0000-0000-000000000000",
@@ -142,7 +142,7 @@
       "name": "US-009: Admin Claims",
       "item": [
         {
-          "name": "Admin List All Claims (200)",
+          "name": "US-009-TC01: Admin List All Claims (Success - 200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/claims/v1/admin/claims?page=0&size=10",
@@ -151,7 +151,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Admin claims listed - 200', function() {", "  pm.response.to.have.status(200);", "  var json = pm.response.json();", "  pm.expect(json.data.content).to.be.an('array');", "});"]}}]
         },
         {
-          "name": "Admin Update Status - UNDER_REVIEW (200)",
+          "name": "US-009-TC02: Admin Update Status to UNDER_REVIEW (Success - 200)",
           "request": {
             "method": "PUT",
             "url": "{{baseUrl}}/api/claims/v1/admin/claims/{{claimId}}/status",
@@ -167,7 +167,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Status updated - 200', function() {", "  pm.response.to.have.status(200);", "});"]}}]
         },
         {
-          "name": "Admin Update Status - Invalid Transition (400)",
+          "name": "US-009-TC03: Admin Invalid Status Transition (Bad Request - 400)",
           "request": {
             "method": "PUT",
             "url": "{{baseUrl}}/api/claims/v1/admin/claims/{{claimId}}/status",
@@ -183,7 +183,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Invalid transition - 400', function() {", "  pm.response.to.have.status(400);", "  var json = pm.response.json();", "  pm.expect(json.message).to.include('Cannot transition');", "});"]}}]
         },
         {
-          "name": "USER Token on Admin Endpoint (403)",
+          "name": "US-009-TC04: USER Token on Admin Endpoint (Forbidden - 403)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/claims/v1/admin/claims",
@@ -197,7 +197,7 @@
       "name": "US-010: Documents",
       "item": [
         {
-          "name": "List Documents (200)",
+          "name": "US-010-TC01: List Documents for Claim (Success - 200)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/claims/v1/claims/{{claimId}}/documents",

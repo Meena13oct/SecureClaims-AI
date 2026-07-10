@@ -20,7 +20,7 @@
       "name": "Setup",
       "item": [
         {
-          "name": "US-005: Register Test User (Setup)",
+          "name": "US-005-TC00: Register Test User (Setup)",
           "event": [
             {
               "listen": "test",
@@ -50,7 +50,7 @@
           }
         },
         {
-          "name": "US-005: Login to Get Token (Setup)",
+          "name": "US-004-TC00: Login to Get Token (Setup)",
           "event": [
             {
               "listen": "test",
@@ -94,7 +94,7 @@
       "name": "US-005: JWT Authentication Filter",
       "item": [
         {
-          "name": "US-005: Access Secured Endpoint Without Token (Unauthorized - 401)",
+          "name": "US-005-TC01: Access Secured Endpoint Without Token (401)",
           "event": [
             {
               "listen": "test",
@@ -122,7 +122,7 @@
           }
         },
         {
-          "name": "US-005: Access Secured Endpoint With Invalid Token (Unauthorized - 401)",
+          "name": "US-005-TC02: Access Secured Endpoint With Invalid Token (401)",
           "event": [
             {
               "listen": "test",
@@ -160,7 +160,7 @@
           }
         },
         {
-          "name": "US-005: Access Secured Endpoint With Expired Token (Unauthorized - 401)",
+          "name": "US-005-TC03: Access Secured Endpoint With Expired Token (401)",
           "event": [
             {
               "listen": "test",
@@ -191,7 +191,7 @@
           }
         },
         {
-          "name": "US-005: Access Public Health Endpoint Without Token (Success - 200)",
+          "name": "US-005-TC04: Access Public Health Endpoint Without Token (200)",
           "event": [
             {
               "listen": "test",
@@ -220,7 +220,7 @@
           }
         },
         {
-          "name": "US-005: Access Secured Endpoint With Valid Token (Success - 200)",
+          "name": "US-005-TC05: Access Secured Endpoint With Valid Token (200)",
           "event": [
             {
               "listen": "test",
@@ -258,7 +258,7 @@
       "name": "US-006: Role-Based Access Control & User Profile",
       "item": [
         {
-          "name": "US-006: Get Current User Profile (Success - 200)",
+          "name": "US-006-TC01: Get Current User Profile (200)",
           "event": [
             {
               "listen": "test",
@@ -313,7 +313,7 @@
           }
         },
         {
-          "name": "US-006: Access Admin Endpoint With USER Token (Forbidden - 403)",
+          "name": "US-006-TC02: Access Admin Endpoint With USER Token (403)",
           "event": [
             {
               "listen": "test",
@@ -343,7 +343,7 @@
           }
         },
         {
-          "name": "US-006: Access Admin Endpoint Without Token (Unauthorized - 401)",
+          "name": "US-006-TC03: Access Admin Endpoint Without Token (401)",
           "event": [
             {
               "listen": "test",
@@ -371,7 +371,7 @@
           }
         },
         {
-          "name": "US-006: Public Register Endpoint Still Accessible (Success - 201/409)",
+          "name": "US-006-TC04: Public Register Endpoint Still Accessible (201/409)",
           "event": [
             {
               "listen": "test",

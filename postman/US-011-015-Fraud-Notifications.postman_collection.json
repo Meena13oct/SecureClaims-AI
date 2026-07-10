@@ -63,7 +63,7 @@
       "name": "US-011: Fraud Scoring (High Risk)",
       "item": [
         {
-          "name": "Submit High-Value Claim (triggers fraud scoring)",
+          "name": "US-011-TC01: Submit High-Value Claim for Fraud Scoring (201)",
           "request": {
             "method": "POST",
             "url": "{{claimsUrl}}/api/claims/v1/claims",
@@ -79,7 +79,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Claim submitted', function() {", "  pm.response.to.have.status(201);", "  pm.collectionVariables.set('claimId', pm.response.json().data.claimId);", "});"]}}]
         },
         {
-          "name": "Verify Fraud Analysis - HIGH Risk",
+          "name": "US-011-TC02: Verify Fraud Analysis Shows HIGH Risk (200)",
           "request": {
             "method": "GET",
             "url": "{{fraudUrl}}/api/fraud/v1/admin/fraud/{{claimId}}",
@@ -93,7 +93,7 @@
       "name": "US-012: Auto Status Update",
       "item": [
         {
-          "name": "Verify Claim Auto-Rejected (HIGH risk)",
+          "name": "US-012-TC01: Verify Claim Auto-Rejected for HIGH Risk (200)",
           "request": {
             "method": "GET",
             "url": "{{claimsUrl}}/api/claims/v1/claims/{{claimId}}",
@@ -102,7 +102,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Claim auto-rejected', function() {", "  pm.response.to.have.status(200);", "  var json = pm.response.json();", "  pm.expect(json.data.status).to.eql('REJECTED');", "});"]}}]
         },
         {
-          "name": "Submit Low-Value Claim (UNDER_REVIEW expected)",
+          "name": "US-012-TC02: Submit Low-Value Claim for UNDER_REVIEW (201)",
           "request": {
             "method": "POST",
             "url": "{{claimsUrl}}/api/claims/v1/claims",
@@ -123,7 +123,7 @@
       "name": "US-015: Admin Fraud & Notifications",
       "item": [
         {
-          "name": "Get Fraud Analysis by ClaimId (200)",
+          "name": "US-015-TC01: Admin Get Fraud Analysis by ClaimId (200)",
           "request": {
             "method": "GET",
             "url": "{{fraudUrl}}/api/fraud/v1/admin/fraud/{{claimId}}",
@@ -132,7 +132,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Fraud analysis retrieved', function() {", "  pm.response.to.have.status(200);", "  var json = pm.response.json();", "  pm.expect(json.data).to.have.property('riskScore');", "  pm.expect(json.data).to.have.property('riskLevel');", "  pm.expect(json.data).to.have.property('analysisNotes');", "});"]}}]
         },
         {
-          "name": "Get Fraud Analysis - Not Found (404)",
+          "name": "US-015-TC02: Admin Get Fraud Analysis Not Found (404)",
           "request": {
             "method": "GET",
             "url": "{{fraudUrl}}/api/fraud/v1/admin/fraud/00000000-0000-0000-0000-000000000000",
@@ -141,7 +141,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Not found - 404', function() {", "  pm.response.to.have.status(404);", "});"]}}]
         },
         {
-          "name": "Get Notification History (200)",
+          "name": "US-015-TC03: Admin Get Notification History (200)",
           "request": {
             "method": "GET",
             "url": "{{notificationUrl}}/api/notifications/v1/admin/notifications/{{userId}}?page=0&size=20",
@@ -150,7 +150,7 @@
           "event": [{"listen": "test", "script": {"exec": ["pm.test('Notifications retrieved', function() {", "  pm.response.to.have.status(200);", "  var json = pm.response.json();", "  pm.expect(json.data.content).to.be.an('array');", "});"]}}]
         },
         {
-          "name": "USER Token on Fraud Admin (403)",
+          "name": "US-015-TC04: USER Token on Fraud Admin Endpoint (403)",
           "request": {
             "method": "GET",
             "url": "{{fraudUrl}}/api/fraud/v1/admin/fraud/{{claimId}}",
