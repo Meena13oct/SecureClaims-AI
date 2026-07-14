@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Verify & Fix GitHub Build After Push",
+  "description": "Automatically triggered after Kiro executes a shell command. If the command was a git push, Kiro monitors the GitHub Actions build, fixes any failures, and deletes old workflow runs once the build succeeds.",
+  "version": "1",
+  "when": {
+    "type": "postToolUse",
+    "toolTypes": [
+      "shell"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check if the shell command that just completed was a `git push`. If it was NOT a git push, ignore this hook and continue normally.\n\nIf it WAS a git push, perform the following steps:\n\n1. **Wait for Build**: Run `gh run list --limit 1 --json status,conclusion,databaseId,name` to get the latest workflow run. If status is \"in_progress\" or \"queued\", wait 30 seconds and check again using `gh run view <run-id> --json status,conclusion`. Keep polling until the run completes.\n\n2. **If Build Fails**:\n   - Run `gh run view <run-id> --log-failed` to get the error logs\n   - Analyze the build errors and identify the root cause in the source code\n   - Fix the code issues locally\n   - Stage, commit with message \"fix: resolve CI build failure\", and push the fix\n   - Note: This push will trigger this hook again, creating a self-healing loop until the build passes\n\n3. **Once Build Succeeds**:\n   - Run `gh run list --limit 50 --json databaseId,status,conclusion,createdAt` to list recent workflow runs\n   - Delete all old runs except the latest successful one using `gh run delete <run-id>` for each\n   - Confirm cleanup is complete\n\nUse the GitHub CLI (gh) for all GitHub Actions interactions."
+  }
+}

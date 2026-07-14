@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Code Standards Reviewer",
+  "description": "Reviews Java code changes against the project's coding standards, before they are written, checking for architecture rules, naming conventions, Javadoc, and best practices.",
+  "version": "1",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [
+      "write"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the code being written against the project's coding standards in .kiro/steering/coding-standards.md. Check for:\n\n1. **Architecture Rules:** No business logic in controllers, no entities in API responses, no repositories accessed from controllers\n2. **Dependency Injection:** Constructor injection only (via @RequiredArgsConstructor), no @Autowired field injection\n3. **Naming Conventions:** PascalCase for classes, camelCase for methods/variables, correct suffixes (Controller, Service, Impl, Repository, Request, Response)\n4. **Javadoc:** Class-level Javadoc with @author and @since present on every class\n5. **Method Size:** No method exceeds 20 lines\n6. **Class Size Limits:** Controller < 80 lines, Service Impl < 200 lines, Entity < 100 lines, DTO < 50 lines\n7. **Exception Handling:** Custom exceptions used (not generic RuntimeException), no inline catches in controllers\n8. **Validation:** @Valid on @RequestBody, Bean Validation annotations on DTOs\n9. **Security:** No hardcoded secrets, @PreAuthorize on admin endpoints, no passwords in responses\n\nIf violations are found, list them clearly and suggest fixes. If the code passes all checks, confirm it meets standards and allow the write to proceed."
+  },
+  "workspaceFolderName": "SecureClaims-AI",
+  "shortName": "code-reviewer" 
+}
