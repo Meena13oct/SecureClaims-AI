@@ -1,4 +1,4 @@
-# ==============================================================================
+ # ==============================================================================
 # SecureClaims AI - CI/CD Pipeline
 # GitHub Actions workflow for building, testing, and deploying Spring Boot
 # microservices with PostgreSQL integration.
@@ -107,12 +107,27 @@ jobs:
           PGPASSWORD=${{ vars.DB_PASSWORD }} psql -h ${{ vars.DB_HOST }} -U ${{ vars.DB_USERNAME }} -d ${{ vars.DB_NAME }} -f dbScripts/V0__create_database_and_schemas.sql
 
       # --------------------------------------------------------------------------
-      # Run unit tests across all modules
+      # Run unit tests across all modules with JaCoCo coverage
       # Uses the test profile which connects to the PostgreSQL service container
       # Flyway migrations execute automatically during test startup
+      # JaCoCo generates coverage reports (CSV + HTML) per module
       # --------------------------------------------------------------------------
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         run: mvn test -B -Dspring.profiles.active=test
+
+      # --------------------------------------------------------------------------
+      # Upload JaCoCo coverage reports as artifacts
+      # Kiro reads the CSV to identify classes below 80% and generates tests
+      # --------------------------------------------------------------------------
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports
+          path: |
+            **/target/site/jacoco/jacoco.csv
+            **/target/site/jacoco/index.html
+          retention-days: 7
 
       # --------------------------------------------------------------------------
       # Build all modules using root pom.xml (compile + package)
