@@ -19,6 +19,8 @@ spring:
     enabled: true
     schemas: claims
     locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
   servlet:
     multipart:
       max-file-size: 10MB
