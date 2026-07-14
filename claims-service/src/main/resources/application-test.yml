@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;INIT=CREATE SCHEMA IF NOT EXISTS CLAIMS\;CREATE SCHEMA IF NOT EXISTS FRAUD\;CREATE SCHEMA IF NOT EXISTS NOTIFICATIONS}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
   jpa:
@@ -8,7 +8,7 @@ spring:
       ddl-auto: create-drop
     properties:
       hibernate:
-        default_schema: public
+        default_schema: claims
     show-sql: false
   flyway:
     enabled: ${SPRING_FLYWAY_ENABLED:false}

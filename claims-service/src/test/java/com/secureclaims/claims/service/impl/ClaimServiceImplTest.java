@@ -2,6 +2,7 @@ package com.secureclaims.claims.service.impl;
 
 import com.secureclaims.claims.dto.request.ClaimRequest;
 import com.secureclaims.claims.dto.response.ClaimResponse;
+import com.secureclaims.claims.dto.response.DocumentResponse;
 import com.secureclaims.claims.entity.Claim;
 import com.secureclaims.claims.entity.Document;
 import com.secureclaims.claims.exception.InvalidStatusTransitionException;
@@ -32,6 +33,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -199,6 +201,61 @@ class ClaimServiceImplTest {
         // then
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getClaimId()).isEqualTo(claim.getId());
+    }
+
+    @Test
+    void should_returnUserClaims_when_getClaimsByUser() {
+        // given
+        final UUID userId = UUID.randomUUID();
+        final Claim claim = buildClaim(userId, ClaimStatus.SUBMITTED);
+        final Page<Claim> page = new PageImpl<>(List.of(claim));
+        when(claimRepository.findByUserId(eq(userId), any())).thenReturn(page);
+
+        // when
+        final Page<ClaimResponse> result = claimService.getClaimsByUser(userId, PageRequest.of(0, 10));
+
+        // then
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getUserId()).isEqualTo(userId);
+    }
+
+    @Test
+    void should_returnDocuments_when_userOwnsClaimForDocuments() {
+        // given
+        final UUID userId = UUID.randomUUID();
+        final Claim claim = buildClaim(userId, ClaimStatus.SUBMITTED);
+        final Document doc = new Document();
+        doc.setId(UUID.randomUUID());
+        doc.setClaimId(claim.getId());
+        doc.setOriginalFilename("policy.pdf");
+        doc.setStoredFilename("stored.pdf");
+        doc.setFilePath("/path/to/stored.pdf");
+        doc.setMimeType("application/pdf");
+        doc.setFileSizeBytes(1024L);
+        doc.setUploadedAt(LocalDateTime.now());
+
+        when(claimRepository.findById(claim.getId())).thenReturn(Optional.of(claim));
+        when(documentRepository.findByClaimId(claim.getId())).thenReturn(List.of(doc));
+
+        // when
+        final var documents = claimService.getDocuments(claim.getId(), userId);
+
+        // then
+        assertThat(documents).hasSize(1);
+        assertThat(documents.get(0).getOriginalFilename()).isEqualTo("policy.pdf");
+    }
+
+    @Test
+    void should_throwAccessDenied_when_userDoesNotOwnClaimForDocuments() {
+        // given
+        final UUID ownerId = UUID.randomUUID();
+        final UUID otherUser = UUID.randomUUID();
+        final Claim claim = buildClaim(ownerId, ClaimStatus.SUBMITTED);
+        when(claimRepository.findById(claim.getId())).thenReturn(Optional.of(claim));
+
+        // when/then
+        assertThatThrownBy(() -> claimService.getDocuments(claim.getId(), otherUser))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
     private Claim buildClaim(final UUID userId, final ClaimStatus status) {
