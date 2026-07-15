@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "security-agent": {
+      "command": "uvx",
+      "args": ["awslabs.security-agent-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "ap-south-1",
+        "WORKSPACE_ROOT": "."
+      }
+    }
+  }
+}

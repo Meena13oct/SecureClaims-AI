@@ -109,7 +109,31 @@
 
 ---
 
-## Slide 8: Kiro Feature — Hooks (Self-Healing CI/CD)
+## Slide 8: Kiro Feature — Hooks (Code Standards Reviewer)
+
+**What I used:** Agent Hook — `code-reviewer.kiro.hook`
+
+**Trigger:** `preToolUse` — fires before any write operation (file creation or edit)
+
+**What it does:**
+1. Intercepts every code write before it happens
+2. Reviews the code against the project's coding standards (`.kiro/steering/coding-standards.md`)
+3. Checks for:
+   - Architecture rules (no logic in controllers, no entities in API responses)
+   - Dependency injection (constructor injection only, no @Autowired)
+   - Naming conventions (PascalCase, camelCase, correct suffixes)
+   - Javadoc presence (@author, @since on every class)
+   - Method size (max 20 lines) and class size limits
+   - Exception handling (custom exceptions, no generic catches)
+   - Security (no hardcoded secrets, @PreAuthorize on admin endpoints)
+4. If violations found — lists them and suggests fixes before allowing the write
+5. If code passes — confirms compliance and allows the write to proceed
+
+**Result:** Code quality is enforced in real-time. Every line written by Kiro is validated against standards before it touches the file system — acting as an automated code reviewer that never misses a rule.
+
+---
+
+## Slide 9: Kiro Feature — Hooks (Self-Healing CI/CD)
 
 **What I used:** Agent Hook — `verify-build-post-push.kiro.hook`
 
@@ -125,7 +149,7 @@
 
 ---
 
-## Slide 9: Kiro Feature — Hooks (Auto-Push on Save)
+## Slide 10: Kiro Feature — Hooks (Auto-Push on Save)
 
 **What I used:** Steering rule `auto-push.md` + Kiro's autopilot
 
@@ -141,7 +165,7 @@
 
 ---
 
-## Slide 10: Kiro Feature — MCP Power (Postman)
+## Slide 11: Kiro Feature — MCP Power (Postman)
 
 **What I used:** Postman MCP Power
 
@@ -157,7 +181,7 @@
 
 ---
 
-## Slide 11: Kiro Feature — Sub-Agents
+## Slide 12: Kiro Feature — Sub-Agents
 
 **What I used:** Context-gatherer and general-task-execution sub-agents
 
@@ -169,7 +193,7 @@
 
 ---
 
-## Slide 12: Kiro Feature — Prompt-Driven Task Execution
+## Slide 13: Kiro Feature — Prompt-Driven Task Execution
 
 **What I used:** Implementation prompt (`.kiro/prompts/07-user-stories-implementation.md`)
 
@@ -186,7 +210,7 @@
 
 ---
 
-## Slide 13: Kiro Feature — CI/CD Pipeline Generation
+## Slide 14: Kiro Feature — CI/CD Pipeline Generation
 
 **What I used:** Kiro Autopilot with prompt
 
@@ -201,7 +225,7 @@
 
 ---
 
-## Slide 14: Kiro Feature — Infrastructure as Code & Deployment Guide
+## Slide 15: Kiro Feature — Infrastructure as Code & Deployment Guide
 
 **What I used:** Kiro Autopilot for AWS CloudFormation
 
@@ -214,7 +238,7 @@
 
 ---
 
-## Slide 15: Kiro Features Summary — What Generated What
+## Slide 16: Kiro Features Summary — What Generated What
 
 | Kiro Feature | What It Generated / Did |
 |-------------|------------------------|
@@ -222,6 +246,7 @@
 | **Autopilot Mode** | Full microservices codebase (4 services) |
 | **Steering Rules** | Consistent code quality, auto-push, API standards |
 | **Hook: API Testing** | Automatic Postman test execution on code changes |
+| **Hook: Code Reviewer** | Pre-write code quality enforcement against standards |
 | **Hook: Self-Healing CI** | Auto-fix build failures and cleanup old runs |
 | **Hook: Auto-Push** | Zero-touch git workflow (stage → commit → push) |
 | **MCP Power: Postman** | Postman collections, test scripts, environments |
@@ -230,44 +255,47 @@
 
 ---
 
-## Slide 16: The Development Flow with Kiro
+## Slide 17: The Development Flow with Kiro
 
 ```
 1. Write prompts (.kiro/prompts/)
-         │
-         ▼
+         |
+         v
 2. Kiro generates requirements + design + user stories (Spec Session)
-         │
-         ▼
+         |
+         v
 3. Set up steering rules (coding standards, API standards, auto-push)
-         │
-         ▼
+         |
+         v
 4. Kiro implements user stories in order (Autopilot + Prompt-Driven Tasks)
-         │
-         ▼
-5. Kiro generates DB migration scripts (Flyway creates tables at service startup)
-         │
-         ▼
-6. After each story → generates execution report + Postman test cases
-         │
-         ▼
-7. On every file save → auto-push to GitHub (Steering: auto-push)
-         │
-         ▼
-8. On every push → monitor build + auto-fix failures (Hook: self-healing CI)
-         │
-         ▼
-9. On every code change → run API tests automatically (Hook: Postman testing)
-         │
-         ▼
-10. Generate infrastructure + deploy to AWS (Autopilot + CloudFormation)
+         |
+         v
+5. Before every file write -> code reviewed against standards (Hook: code reviewer)
+         |
+         v
+6. Kiro generates DB migration scripts (Flyway creates tables at service startup)
+         |
+         v
+7. After each story -> generates execution report + Postman test cases
+         |
+         v
+8. On every file save -> auto-push to GitHub (Steering: auto-push)
+         |
+         v
+9. On every push -> monitor build + auto-fix failures (Hook: self-healing CI)
+         |
+         v
+10. On every code change -> run API tests automatically (Hook: Postman testing)
+         |
+         v
+11. Generate infrastructure + deploy to AWS (Autopilot + CloudFormation)
 ```
 
 **My role:** Provide the initial prompts and review. Kiro did the rest.
 
 ---
 
-## Slide 17: Thank You
+## Slide 18: Thank You
 
 **SecureClaims AI — Built End-to-End with Kiro**
 

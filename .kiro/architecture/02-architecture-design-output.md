@@ -16,6 +16,7 @@
 3. [Event Flow Sequence](#3-event-flow-sequence)
 4. [Service Interaction Design](#4-service-interaction-design)
 5. [Design Decisions & Justification](#5-design-decisions--justification)
+6. [Security Architecture](#6-security-architecture)
 
 ---
 
@@ -838,6 +839,176 @@ secureclaims-ai/                    ← Parent Maven project
 | 0 – 1 | LOW | → UNDER_REVIEW |
 | 2 – 3 | MEDIUM | → UNDER_REVIEW |
 | 4+ | HIGH | → REJECTED (overridable by ADMIN) |
+
+---
+
+## 6. Security Architecture
+
+This section specifies the security requirements and design constraints for the SecureClaims AI system. All services SHALL conform to these security specifications.
+
+---
+
+### 6.1 Authentication Requirements
+
+The system SHALL implement stateless token-based authentication with the following specifications:
+
+- The system SHALL authenticate users via signed JWT (JSON Web Token) using HMAC-SHA256 (HS256) algorithm
+- The system SHALL require users to authenticate with email and password via a dedicated login endpoint
+- The system SHALL hash all user passwords using BCrypt with a minimum work factor of 10 rounds before persisting to the database
+- The system SHALL never store plaintext passwords in any data store, log file, or API response
+- The system SHALL issue JWT tokens containing the user's ID, username, assigned roles, issued-at timestamp, and expiry timestamp
+- The system SHALL enforce a configurable token expiry (default: 24 hours) after which the token becomes invalid
+- The system SHALL validate the JWT signature and expiry on every request to a protected endpoint via a security filter in the request chain
+- The system SHALL reject requests with missing, expired, malformed, or tampered tokens with HTTP 401 Unauthorized
+- The system SHALL transmit credentials only in HTTPS POST request bodies — never in URLs, query parameters, or headers other than Authorization
+
+---
+
+### 6.2 Authorization Requirements
+
+The system SHALL enforce Role-Based Access Control (RBAC) with the following role definitions:
+
+| Role | Access Scope |
+|------|-------------|
+| `ROLE_USER` | The system SHALL allow users to submit claims, upload documents, and view only their own claims, documents, and notifications |
+| `ROLE_ADMIN` | The system SHALL allow administrators to view all claims, update claim statuses, view fraud analysis results, manage user accounts, and view all notifications |
+| `ANONYMOUS` | The system SHALL allow unauthenticated access only to user registration and login endpoints |
+
+The system SHALL enforce authorization at three layers:
+1. **URL-level** — The security configuration SHALL restrict endpoint URL patterns by role
+2. **Method-level** — Protected controller methods SHALL declare required roles via annotations
+3. **Data-level** — Service methods SHALL verify that the authenticated user owns the requested resource before returning data
+
+The system SHALL return HTTP 403 Forbidden when an authenticated user attempts to access a resource beyond their assigned role.
+
+The system SHALL enforce resource ownership — users SHALL NOT be able to view, modify, or upload documents to claims belonging to other users.
+
+---
+
+### 6.3 Data Protection Requirements
+
+#### 6.3.1 Data at Rest
+
+- The system SHALL store user passwords only as one-way BCrypt hashes
+- The system SHALL store the JWT signing secret exclusively in environment variables — never in source code, configuration files committed to version control, or database tables
+- The system SHALL externalize all database credentials via environment variables
+- The system SHALL store uploaded documents with system-generated UUID filenames to prevent unauthorized access via filename guessing
+- The system SHALL isolate each service's data in a separate database schema with no cross-schema foreign key relationships
+
+#### 6.3.2 Data in Transit
+
+- The system SHALL enforce HTTPS (TLS 1.2 or higher) for all client-to-service communication in production environments
+- The system SHALL encrypt database connections in production using SSL/TLS
+- Inter-service event communication SHALL occur in-memory within the application context, requiring no network-level encryption
+
+#### 6.3.3 Sensitive Data Exposure Prevention
+
+- The system SHALL exclude password hashes from all API response payloads
+- The system SHALL never log JWT tokens, passwords, or secret keys in application logs
+- The system SHALL return generic error messages in API responses without exposing stack traces, internal paths, or implementation details
+- The system SHALL never include sensitive data (tokens, passwords, secrets) in URL query parameters
+- The system SHALL never expose JPA entity objects directly in API responses — all responses SHALL use dedicated DTO objects
+
+---
+
+### 6.4 Input Validation Requirements
+
+The system SHALL validate all external input at multiple layers:
+
+| Layer | Requirement |
+|-------|------------|
+| **API Gateway / Controller** | The system SHALL validate all request body fields using Bean Validation constraints (not-null, not-blank, email format, size limits, numeric ranges) before processing |
+| **Service Layer** | The system SHALL enforce business rules including valid state transitions, resource ownership, and logical constraints |
+| **Database Layer** | The system SHALL enforce NOT NULL, UNIQUE, and foreign key constraints at the schema level as a final safety net |
+| **File Upload** | The system SHALL validate uploaded file MIME types (allowing only PDF, JPEG, PNG) and reject files exceeding 10MB |
+
+#### 6.4.1 Injection Prevention
+
+- The system SHALL use parameterized queries (via ORM/JPA) for all database operations — raw SQL string concatenation SHALL NOT be used
+- The system SHALL use only named parameters in custom JPQL queries
+- The system SHALL sanitize uploaded filenames by generating UUID-based stored names, storing original filenames only as metadata
+- The system SHALL resolve file storage paths from a configured base directory and SHALL reject any path containing directory traversal sequences (`..`)
+
+#### 6.4.2 Cross-Site Scripting (XSS) Prevention
+
+- The system SHALL serve only JSON responses (no server-rendered HTML), eliminating reflected XSS vectors
+- The system SHALL validate string inputs against expected patterns using regex constraints where applicable
+
+---
+
+### 6.5 Secrets Management Requirements
+
+- The system SHALL externalize all secrets (JWT signing key, database passwords, API keys, SSH keys) as environment variables or encrypted secret stores
+- The system SHALL never commit secrets to version control — the `.gitignore` file SHALL exclude all files containing secrets (`.env.properties`, `.env`)
+- Application configuration files SHALL use environment variable placeholders with development-only defaults that are clearly marked as non-production values
+- The JWT signing secret SHALL be a minimum of 256 bits (32 bytes) in length
+- CI/CD pipeline secrets SHALL be stored in the platform's encrypted secrets management (e.g., GitHub Secrets) and never echoed in build logs
+- The system SHALL support secret rotation without service downtime — rotating the JWT secret SHALL invalidate tokens naturally at their expiry boundary
+
+---
+
+### 6.6 Network Security Requirements
+
+- The system SHALL restrict database access to the internal Docker network — the PostgreSQL port SHALL NOT be exposed to the public internet
+- The system SHALL restrict SSH access (port 22) to authorized administrator IP addresses only via security group rules
+- The system SHALL deploy services behind a security group that limits inbound traffic to required ports only
+- The system SHALL support future deployment behind an Application Load Balancer (ALB) for TLS termination and DDoS mitigation
+- The system SHALL use IAM Instance Profiles for AWS service access instead of long-lived access keys on EC2 instances
+
+---
+
+### 6.7 Security Headers and API Hardening Requirements
+
+The system SHALL include the following security headers in all HTTP responses:
+
+| Header | Required Value | Purpose |
+|--------|---------------|---------|
+| `X-Content-Type-Options` | `nosniff` | The system SHALL prevent MIME-type sniffing attacks |
+| `X-Frame-Options` | `DENY` | The system SHALL prevent clickjacking by disabling iframe embedding |
+| `Cache-Control` | `no-store` on authenticated responses | The system SHALL prevent caching of authenticated response data |
+| `Content-Type` | `application/json` | The system SHALL explicitly declare response content type |
+
+The system SHALL disable CORS in production (same-origin policy enforced). If CORS is required for specific consumers, the system SHALL whitelist only explicitly approved origins.
+
+The system SHALL implement rate limiting on authentication endpoints to prevent brute-force attacks.
+
+---
+
+### 6.8 Threat Model — Required Mitigations (STRIDE)
+
+The system SHALL address the following threat categories with corresponding security controls:
+
+| Threat | Attack Scenario | Required Mitigation |
+|--------|----------------|---------------------|
+| **Spoofing** | Attacker crafts a fake JWT token | The system SHALL verify HMAC-SHA256 signatures on every token and reject unsigned or incorrectly signed tokens |
+| **Spoofing** | Brute-force login attempts | The system SHALL use BCrypt (computationally expensive) for password verification and SHALL implement rate limiting on login endpoints |
+| **Tampering** | Attacker modifies JWT claims to escalate roles | The system SHALL reject any token whose signature does not match the payload — modified tokens SHALL return 401 |
+| **Tampering** | SQL injection via user input | The system SHALL use parameterized queries exclusively — no dynamic SQL construction from user input |
+| **Tampering** | Path traversal in file uploads | The system SHALL generate server-side filenames and SHALL NOT use client-provided filenames in filesystem paths |
+| **Repudiation** | User denies submitting a fraudulent claim | The system SHALL maintain immutable audit fields (createdAt, userId) on all entities and SHALL log all state-changing operations with correlation IDs |
+| **Information Disclosure** | Passwords leaked in API responses | The system SHALL exclude password fields from all serialized API responses |
+| **Information Disclosure** | Stack traces expose internal architecture | The system SHALL catch all exceptions centrally and return only generic error messages to clients |
+| **Information Disclosure** | Secrets committed to source control | The system SHALL externalize all secrets and SHALL maintain `.gitignore` rules excluding secret-containing files |
+| **Denial of Service** | Oversized file upload exhausts disk/memory | The system SHALL enforce a maximum upload size (10MB) at the web server level |
+| **Denial of Service** | Unbounded database queries exhaust resources | The system SHALL require pagination parameters on all list endpoints and SHALL NOT return unbounded result sets |
+| **Elevation of Privilege** | Regular user accesses admin-only endpoints | The system SHALL enforce role requirements at both URL and method levels — requests without required roles SHALL be rejected with 403 |
+| **Elevation of Privilege** | User views/modifies another user's data | The system SHALL verify resource ownership in the service layer before returning or modifying data |
+
+---
+
+### 6.9 Security Monitoring and Audit Requirements
+
+- The system SHALL log all successful and failed authentication attempts at INFO level, including the email address but never the password
+- The system SHALL log all authorization failures (403 responses) at WARN level, including the endpoint, required role, and authenticated user ID
+- The system SHALL generate a unique correlation ID for each inbound request and propagate it through all processing layers for traceability
+- The system SHALL use structured logging (JSON format) with consistent fields: timestamp, service name, log level, correlation ID, and message
+- The system SHALL expose health check endpoints (`/actuator/health`) for monitoring service availability
+- The system SHALL configure container health checks and automatic restart policies to recover from transient failures
+- The system SHALL NOT log sensitive data including JWT tokens, passwords, secret keys, or full credit card numbers
+
+---
+
+*Section 6 specifies security requirements for the SecureClaims AI system architecture. These requirements SHALL be evaluated during design reviews and security assessments.*
 
 ---
 

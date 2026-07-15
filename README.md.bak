@@ -35,3 +35,7 @@ Instance Status
 -------------------
 aws ec2 describe-instance-status --instance-ids i-0e8c0a5d3faa2cdab --region ap-south-1 --query  "InstanceStatuses[0].[InstanceState.Name,InstanceStatus.Status,SystemStatus.Status]" --output text
 aws ec2 describe-instance-status --filters "Name=instance-state-name,Values=running" --region ap-south-1 --query "InstanceStatuses[*].[InstanceId,InstanceState.Name,InstanceStatus.Status,SystemStatus.Status]" --output table
+
+For Hook - Githubgh CLI installed
+gh auth login (one-time per machine)
+Kiro IDE
