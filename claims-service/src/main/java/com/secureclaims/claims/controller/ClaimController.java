@@ -56,7 +56,7 @@ public class ClaimController {
 
         final UUID userId = UUID.fromString(auth.getName());
         final Page<ClaimResponse> claims = claimService.getClaimsByUser(userId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(200, "Claims retrieved", claims));
+        return ResponseEntity.ok(ApiResponse.success( , "Claims retrieved", claims));
     }
 
     @Operation(summary = "Get a specific claim", security = @SecurityRequirement(name = "bearerAuth"))

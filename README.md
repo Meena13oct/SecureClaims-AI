@@ -39,3 +39,7 @@ aws ec2 describe-instance-status --filters "Name=instance-state-name,Values=runn
  aws ec2 describe-instance-types --filters "Name=free-tier-eligible,Values=true" --region ap-south-1 --query  "InstanceTypes[*].[InstanceType,MemoryInfo.SizeInMiB]" --output table
  
  kiro-cli chat --trust-all-tools
+
+@log-observer
+
+nly truncate the data from all tables except the roles table, keeping the schemas, tables, and structure intact.
